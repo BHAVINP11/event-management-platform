@@ -21,14 +21,18 @@ service cloud.firestore {
       let membershipPath = /databases/$(database)/documents/organizationMembers/$(organizationId + "_" + request.auth.uid);
       return isAuthenticated() &&
         exists(membershipPath) &&
-        get(membershipPath).data.status == "active";
+        get(membershipPath).data.status == "active" &&
+        get(membershipPath).data.organizationId == organizationId &&
+        get(membershipPath).data.userId == request.auth.uid;
     }
 
     function isActiveEventMember(eventId) {
       let membershipPath = /databases/$(database)/documents/eventMembers/$(eventId + "_" + request.auth.uid);
       return isAuthenticated() &&
         exists(membershipPath) &&
-        get(membershipPath).data.status == "active";
+        get(membershipPath).data.status == "active" &&
+        get(membershipPath).data.eventId == eventId &&
+        get(membershipPath).data.userId == request.auth.uid;
     }
 
     // Default deny all

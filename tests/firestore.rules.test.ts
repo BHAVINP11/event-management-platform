@@ -127,6 +127,19 @@ describe('Firestore Security Rules', () => {
 
       await expect(testEnv.authenticatedContext('user1').firestore().collection('organizations').doc('org1').get()).rejects.toThrow();
     });
+
+    test('malformed organization membership at the expected path cannot grant access', async () => {
+      const memberId = organizationMembershipId('org1', 'user1');
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizations').doc('org1').set(organization());
+        await adminDb.firestore().collection('organizationMembers').doc(memberId).set({
+          ...organizationMember('different-org', 'user1', 'active'),
+          id: memberId
+        });
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('organizations').doc('org1').get()).rejects.toThrow();
+    });
   });
 
   describe('Events', () => {
@@ -149,6 +162,19 @@ describe('Firestore Security Rules', () => {
       await seed(async (adminDb) => {
         await adminDb.firestore().collection('events').doc('event1').set(event());
         await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'inactive'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('events').doc('event1').get()).rejects.toThrow();
+    });
+
+    test('malformed event membership at the expected path cannot grant access', async () => {
+      const memberId = eventMembershipId('event1', 'user1');
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('events').doc('event1').set(event());
+        await adminDb.firestore().collection('eventMembers').doc(memberId).set({
+          ...eventMember('event1', 'different-user', 'active'),
+          id: memberId
+        });
       });
 
       await expect(testEnv.authenticatedContext('user1').firestore().collection('events').doc('event1').get()).rejects.toThrow();
