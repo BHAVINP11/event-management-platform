@@ -496,26 +496,36 @@ This prevents storing undefined values in Firestore and keeps documents clean.
 
 ## Slug Uniqueness: MVP Limitation
 
-**Current behavior**: Linear search on every organization creation request.
+**Current behavior**:
+The system normalizes the requested slug and checks the organizations collection for an existing document with the same slug before creating the organization.
 
+```typescript
+// Query to check slug availability
+const snapshot = await db
+  .collection('organizations')
+  .where('slug', '==', normalizedSlug)
+  .limit(1)
+  .get();
+
+// Only create if no match found
+if (snapshot.empty) {
+  // Create organization with auto-generated Firestore document ID
+  const organizationRef = db.collection('organizations').doc();
+  // ... set slug field in document
+}
 ```
-SELECT * FROM organizations WHERE slug == normalizedSlug LIMIT 1
-```
 
-**Characteristics**:
-- Prevents duplicate slugs from being created
-- Suitable for MVP and low-concurrency environments
-- Not a perfect concurrency-level guarantee
+**MVP limitation**:
+- The organization document itself uses an auto-generated Firestore document ID (not based on slug)
+- Two simultaneous organization creation requests with the same slug could theoretically both pass the availability check before either organization is written to Firestore
+- The auto-generated organization ID does not provide slug-level uniqueness
 
-**Potential race condition** (unlikely in practice):
-Two simultaneous requests with the same slug could both pass the check if timing aligns. However, Firestore's deterministic document ID strategy (based on slug, not auto-generated) would prevent actual duplicates in the collection.
+This is accepted as an MVP limitation suitable for low-concurrency environments.
 
-**Future improvements** (not in scope):
-- Dedicated slug index in Firestore
-- Hash-based slug reservation system
-- Eventually consistent slug uniqueness guarantees
+**Future improvement**:
+A dedicated slug reservation/index document or another transactional uniqueness strategy can be introduced when needed.
 
-For this step, the linear search is acceptable for MVP. Production deployments should monitor slug collision rates.
+For this step, the availability check is acceptable for MVP. Production deployments should monitor slug collision rates.
 
 ## Future Enhancements
 
