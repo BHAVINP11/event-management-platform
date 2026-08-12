@@ -7,10 +7,14 @@ const AuthContext = createContext<AuthState & { signOut: () => Promise<void> } |
 export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element => {
   const [user, setUser] = useState<AuthState['user']>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [profileError, setProfileError] = useState<AuthState['profileError']>(null);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthState((authenticatedUser) => {
-      setUser(authenticatedUser);
+    const unsubscribe = subscribeToAuthState((state) => {
+      setUser(state.user);
+      setIsAuthenticated(state.isAuthenticated);
+      setProfileError(state.profileError);
       setLoading(false);
     });
 
@@ -21,12 +25,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     () => ({
       user,
       loading,
-      isAuthenticated: !!user,
+      isAuthenticated,
+      profileError,
       signOut: async () => {
         await authSignOut();
       }
     }),
-    [user, loading]
+    [user, loading, isAuthenticated, profileError]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

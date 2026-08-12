@@ -1,20 +1,36 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as firebaseSignOut, deleteUser, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/services/firebase/auth';
 import { User } from '@/types/user';
-import { createUserProfile, getUserProfile } from '@/features/auth/services/userProfileService';
+import {
+  createUserProfile,
+  getUserProfile,
+  UserProfileInfrastructureError,
+  UserProfileInvalidError,
+  UserProfileNotFoundError
+} from '@/features/auth/services/userProfileService';
 import { SignUpPayload, SignInPayload } from '@/features/auth/types/auth';
+
+export type AuthProfileError = {
+  kind: 'profileInvalid' | 'profileInfrastructure';
+  message: string;
+};
+
+export type AuthSubscriptionState = {
+  user: User | null;
+  isAuthenticated: boolean;
+  profileError: AuthProfileError | null;
+};
 
 const mapFirebaseUserToAuthUser = async (firebaseUser: FirebaseUser): Promise<User> => {
   const profile = await getUserProfile(firebaseUser.uid);
   if (!profile) {
-    throw new Error('User profile not found');
+    throw new UserProfileNotFoundError();
   }
   return profile;
 };
 
-const handleMissingProfile = async (): Promise<null> => {
+const signOutForMissingProfile = async (): Promise<void> => {
   await firebaseSignOut(auth);
-  return null;
 };
 
 export const signUp = async (payload: SignUpPayload): Promise<User> => {
@@ -47,26 +63,70 @@ export const signUp = async (payload: SignUpPayload): Promise<User> => {
 
 export const signIn = async (payload: SignInPayload): Promise<User> => {
   const userCredential = await signInWithEmailAndPassword(auth, payload.email, payload.password);
-  return mapFirebaseUserToAuthUser(userCredential.user);
+
+  try {
+    return await mapFirebaseUserToAuthUser(userCredential.user);
+  } catch (error) {
+    if (error instanceof UserProfileNotFoundError) {
+      await signOutForMissingProfile();
+    }
+    throw error;
+  }
 };
 
 export const signOut = async (): Promise<void> => {
   await firebaseSignOut(auth);
 };
 
-export const subscribeToAuthState = (callback: (user: User | null) => void): ReturnType<typeof onAuthStateChanged> => {
+export const subscribeToAuthState = (callback: (state: AuthSubscriptionState) => void): ReturnType<typeof onAuthStateChanged> => {
   return onAuthStateChanged(auth, async (firebaseUser) => {
     if (!firebaseUser) {
-      callback(null);
+      callback({ user: null, isAuthenticated: false, profileError: null });
       return;
     }
 
     try {
       const appUser = await mapFirebaseUserToAuthUser(firebaseUser);
-      callback(appUser);
+      callback({ user: appUser, isAuthenticated: true, profileError: null });
     } catch (error) {
-      await handleMissingProfile();
-      callback(null);
+      if (error instanceof UserProfileNotFoundError) {
+        await signOutForMissingProfile();
+        callback({ user: null, isAuthenticated: false, profileError: null });
+        return;
+      }
+
+      if (error instanceof UserProfileInvalidError) {
+        callback({
+          user: null,
+          isAuthenticated: true,
+          profileError: {
+            kind: 'profileInvalid',
+            message: 'Your profile data is invalid. Please contact support.'
+          }
+        });
+        return;
+      }
+
+      if (error instanceof UserProfileInfrastructureError) {
+        callback({
+          user: null,
+          isAuthenticated: true,
+          profileError: {
+            kind: 'profileInfrastructure',
+            message: 'Unable to load profile data. Please check your connection and try again.'
+          }
+        });
+        return;
+      }
+
+      callback({
+        user: null,
+        isAuthenticated: true,
+        profileError: {
+          kind: 'profileInfrastructure',
+          message: 'Unable to load profile data. Please try again.'
+        }
+      });
     }
   });
 };
