@@ -30,6 +30,7 @@ export declare function validateCreateIndividualEventInput(input: unknown): Crea
  * - organizationId is null (individual event)
  * - createdBy is the authenticated user
  * - status is draft
+ * - Optional fields are omitted when not provided (not stored as undefined)
  */
 export declare function buildEventDocument(eventId: string, userId: string, input: CreateIndividualEventInput, now: string): Record<string, unknown>;
 /**

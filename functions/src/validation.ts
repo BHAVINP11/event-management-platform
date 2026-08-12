@@ -208,6 +208,7 @@ export function validateEndDate(endDate: string | undefined | unknown, startDate
 
 /**
  * Validate timezone.
+ * Checks against IANA timezone identifiers using Intl API.
  */
 export function validateTimezone(timezone: string | unknown): void {
   if (!timezone || typeof timezone !== 'string') {
@@ -218,6 +219,18 @@ export function validateTimezone(timezone: string | unknown): void {
     throw new ValidationError(
       'invalid_timezone',
       `Timezone must be at most ${TIMEZONE_MAX} characters.`
+    );
+  }
+
+  // Validate against IANA timezone database using Intl API
+  try {
+    // Attempt to create a DateTimeFormat with the given timezone.
+    // This will throw if the timezone is invalid.
+    new Intl.DateTimeFormat(undefined, { timeZone: timezone });
+  } catch {
+    throw new ValidationError(
+      'invalid_timezone',
+      `Timezone "${timezone}" is not a valid IANA timezone identifier.`
     );
   }
 }

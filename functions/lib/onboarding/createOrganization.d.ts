@@ -23,6 +23,7 @@ export declare function getOrganizationMembershipId(organizationId: string, user
 export declare function validateCreateOrganizationInput(input: unknown): CreateOrganizationInput;
 /**
  * Build a Firestore organization document.
+ * Optional fields are omitted when not provided (not stored as undefined).
  */
 export declare function buildOrganizationDocument(organizationId: string, input: CreateOrganizationInput, now: string): Record<string, unknown>;
 /**

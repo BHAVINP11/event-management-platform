@@ -52,6 +52,7 @@ export declare function validateStartDate(startDate: string | unknown): void;
 export declare function validateEndDate(endDate: string | undefined | unknown, startDate: string): void;
 /**
  * Validate timezone.
+ * Checks against IANA timezone identifiers using Intl API.
  */
 export declare function validateTimezone(timezone: string | unknown): void;
 /**

@@ -46,24 +46,34 @@ function validateCreateIndividualEventInput(input) {
  * - organizationId is null (individual event)
  * - createdBy is the authenticated user
  * - status is draft
+ * - Optional fields are omitted when not provided (not stored as undefined)
  */
 function buildEventDocument(eventId, userId, input, now) {
-    return {
+    const doc = {
         id: eventId,
         name: input.name,
         type: input.type,
-        description: input.description,
         startDate: input.startDate,
-        endDate: input.endDate,
         timezone: input.timezone,
-        venueName: input.venueName,
-        venueAddress: input.venueAddress,
         organizationId: null,
         createdBy: userId,
         status: 'draft',
         createdAt: now,
         updatedAt: now
     };
+    if (input.description !== undefined) {
+        doc.description = input.description;
+    }
+    if (input.endDate !== undefined) {
+        doc.endDate = input.endDate;
+    }
+    if (input.venueName !== undefined) {
+        doc.venueName = input.venueName;
+    }
+    if (input.venueAddress !== undefined) {
+        doc.venueAddress = input.venueAddress;
+    }
+    return doc;
 }
 /**
  * Build a Firestore event member document.

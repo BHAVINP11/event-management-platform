@@ -454,6 +454,69 @@ Unknown errors are mapped to:
 
 Cloud Functions do not require environment variables for this implementation. All configuration (Firestore collection names, ID prefixes, validation limits) is hardcoded.
 
+## Hardening: Package Configuration
+
+The Cloud Functions package is configured for deployment:
+
+- **functions/package.json**: `"main": "lib/index.js"` (compiled output entry point)
+- **functions/tsconfig.json**: Compiles to CommonJS format in `lib/` directory
+- **Build output**: `npm run build` generates `lib/index.js` + type declarations
+
+Deployment with `firebase deploy --only functions` uses the compiled `lib/index.js` as the entry point.
+
+## Hardening: Timezone Validation
+
+Timezone identifiers are validated against IANA timezone database using Node.js `Intl.DateTimeFormat` API:
+
+Valid examples:
+- America/New_York
+- Europe/London
+- Asia/Tokyo
+- Australia/Sydney
+- UTC
+
+Invalid timezones are rejected with friendly error: "Timezone 'xyz123' is not a valid IANA timezone identifier."
+
+## Hardening: Optional Field Storage
+
+Optional fields in Firestore documents are omitted when not provided:
+
+**Organization optional fields** (omitted if undefined):
+- description
+- contactEmail
+- contactPhone
+
+**Event optional fields** (omitted if undefined):
+- description
+- endDate
+- venueName
+- venueAddress
+
+This prevents storing undefined values in Firestore and keeps documents clean.
+
+## Slug Uniqueness: MVP Limitation
+
+**Current behavior**: Linear search on every organization creation request.
+
+```
+SELECT * FROM organizations WHERE slug == normalizedSlug LIMIT 1
+```
+
+**Characteristics**:
+- Prevents duplicate slugs from being created
+- Suitable for MVP and low-concurrency environments
+- Not a perfect concurrency-level guarantee
+
+**Potential race condition** (unlikely in practice):
+Two simultaneous requests with the same slug could both pass the check if timing aligns. However, Firestore's deterministic document ID strategy (based on slug, not auto-generated) would prevent actual duplicates in the collection.
+
+**Future improvements** (not in scope):
+- Dedicated slug index in Firestore
+- Hash-based slug reservation system
+- Eventually consistent slug uniqueness guarantees
+
+For this step, the linear search is acceptable for MVP. Production deployments should monitor slug collision rates.
+
 ## Future Enhancements
 
 Out of scope for this step:

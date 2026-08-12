@@ -154,3 +154,118 @@ describe('Event Validation', () => {
         });
     });
 });
+describe('Document Builders', () => {
+    describe('buildOrganizationDocument', () => {
+        it('should omit undefined optional fields', () => {
+            const input = {
+                name: 'Royal Events',
+                slug: 'royal-events',
+                description: undefined,
+                contactEmail: undefined,
+                contactPhone: undefined
+            };
+            const doc = (0, createOrganization_1.buildOrganizationDocument)('org-123', input, '2025-01-01T00:00:00Z');
+            expect(doc.name).toBe('Royal Events');
+            expect(doc.slug).toBe('royal-events');
+            expect(doc.createdAt).toBe('2025-01-01T00:00:00Z');
+            expect('description' in doc).toBe(false);
+            expect('contactEmail' in doc).toBe(false);
+            expect('contactPhone' in doc).toBe(false);
+            expect('logoUrl' in doc).toBe(false);
+        });
+        it('should include optional fields when provided', () => {
+            const input = {
+                name: 'Royal Events',
+                slug: 'royal-events',
+                description: 'Premium planning',
+                contactEmail: 'contact@royal.com',
+                contactPhone: '555-1234'
+            };
+            const doc = (0, createOrganization_1.buildOrganizationDocument)('org-123', input, '2025-01-01T00:00:00Z');
+            expect(doc.description).toBe('Premium planning');
+            expect(doc.contactEmail).toBe('contact@royal.com');
+            expect(doc.contactPhone).toBe('555-1234');
+        });
+    });
+    describe('buildEventDocument', () => {
+        it('should omit undefined optional fields', () => {
+            const input = {
+                name: 'My Event',
+                type: 'wedding',
+                description: undefined,
+                startDate: '2025-06-15T16:00:00Z',
+                endDate: undefined,
+                timezone: 'America/New_York',
+                venueName: undefined,
+                venueAddress: undefined
+            };
+            const doc = (0, createIndividualEvent_1.buildEventDocument)('event-123', 'user-456', input, '2025-01-01T00:00:00Z');
+            expect(doc.name).toBe('My Event');
+            expect(doc.type).toBe('wedding');
+            expect(doc.startDate).toBe('2025-06-15T16:00:00Z');
+            expect(doc.timezone).toBe('America/New_York');
+            expect('description' in doc).toBe(false);
+            expect('endDate' in doc).toBe(false);
+            expect('venueName' in doc).toBe(false);
+            expect('venueAddress' in doc).toBe(false);
+        });
+        it('should include optional fields when provided', () => {
+            const input = {
+                name: 'My Event',
+                type: 'wedding',
+                description: 'A beautiful celebration',
+                startDate: '2025-06-15T16:00:00Z',
+                endDate: '2025-06-15T22:00:00Z',
+                timezone: 'America/New_York',
+                venueName: 'Grand Ballroom',
+                venueAddress: '123 Main St'
+            };
+            const doc = (0, createIndividualEvent_1.buildEventDocument)('event-123', 'user-456', input, '2025-01-01T00:00:00Z');
+            expect(doc.description).toBe('A beautiful celebration');
+            expect(doc.endDate).toBe('2025-06-15T22:00:00Z');
+            expect(doc.venueName).toBe('Grand Ballroom');
+            expect(doc.venueAddress).toBe('123 Main St');
+        });
+    });
+});
+describe('Timezone Validation', () => {
+    it('should accept valid IANA timezone identifiers', () => {
+        const validTimezones = [
+            'America/New_York',
+            'America/Los_Angeles',
+            'Europe/London',
+            'Europe/Paris',
+            'Asia/Tokyo',
+            'Asia/Kolkata',
+            'Australia/Sydney',
+            'UTC'
+        ];
+        for (const tz of validTimezones) {
+            const input = {
+                name: 'Test Event',
+                type: 'wedding',
+                startDate: '2025-06-15T16:00:00Z',
+                timezone: tz
+            };
+            expect(() => (0, createIndividualEvent_1.validateCreateIndividualEventInput)(input)).not.toThrow();
+        }
+    });
+    it('should reject invalid timezone identifiers', () => {
+        const invalidTimezones = [
+            'xyz123',
+            'random',
+            'abc/timezone',
+            'Invalid/Timezone',
+            'NotATimezone'
+        ];
+        for (const tz of invalidTimezones) {
+            const input = {
+                name: 'Test Event',
+                type: 'wedding',
+                startDate: '2025-06-15T16:00:00Z',
+                timezone: tz
+            };
+            expect(() => (0, createIndividualEvent_1.validateCreateIndividualEventInput)(input)).toThrow(validation_1.ValidationError);
+        }
+    });
+});

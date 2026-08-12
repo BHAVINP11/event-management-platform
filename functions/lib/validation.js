@@ -174,6 +174,7 @@ function validateEndDate(endDate, startDate) {
 }
 /**
  * Validate timezone.
+ * Checks against IANA timezone identifiers using Intl API.
  */
 function validateTimezone(timezone) {
     if (!timezone || typeof timezone !== 'string') {
@@ -181,6 +182,15 @@ function validateTimezone(timezone) {
     }
     if (timezone.length > TIMEZONE_MAX) {
         throw new ValidationError('invalid_timezone', `Timezone must be at most ${TIMEZONE_MAX} characters.`);
+    }
+    // Validate against IANA timezone database using Intl API
+    try {
+        // Attempt to create a DateTimeFormat with the given timezone.
+        // This will throw if the timezone is invalid.
+        new Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    }
+    catch {
+        throw new ValidationError('invalid_timezone', `Timezone "${timezone}" is not a valid IANA timezone identifier.`);
     }
 }
 /**

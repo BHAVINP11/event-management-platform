@@ -61,23 +61,32 @@ export function validateCreateOrganizationInput(input: unknown): CreateOrganizat
 
 /**
  * Build a Firestore organization document.
+ * Optional fields are omitted when not provided (not stored as undefined).
  */
 export function buildOrganizationDocument(
   organizationId: string,
   input: CreateOrganizationInput,
   now: string
 ): Record<string, unknown> {
-  return {
+  const doc: Record<string, unknown> = {
     id: organizationId,
     name: input.name,
     slug: input.slug,
-    logoUrl: undefined,
-    description: input.description,
-    contactEmail: input.contactEmail,
-    contactPhone: input.contactPhone,
     createdAt: now,
     updatedAt: now
   };
+
+  if (input.description !== undefined) {
+    doc.description = input.description;
+  }
+  if (input.contactEmail !== undefined) {
+    doc.contactEmail = input.contactEmail;
+  }
+  if (input.contactPhone !== undefined) {
+    doc.contactPhone = input.contactPhone;
+  }
+
+  return doc;
 }
 
 /**
