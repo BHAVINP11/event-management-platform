@@ -1,8 +1,9 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, runTransaction, updateDoc, where } from 'firebase/firestore';
 import { firestore } from '@/services/firebase/firestore';
 import { OrganizationMember, OrganizationRole, MembershipStatus } from '@/types/membership';
 import { OrganizationMemberRepository } from '@/repositories/interfaces/organizationMemberRepository';
-import { RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { RepositoryConflictError, RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { getOrganizationMembershipId } from '@/repositories/membershipIds';
 import { getRequiredString, getValidatedEnum } from '@/services/firebase/repositories/firestoreMapping';
 
 const organizationMembersCollection = 'organizationMembers';
@@ -52,16 +53,27 @@ export class FirebaseOrganizationMemberRepository implements OrganizationMemberR
   }
 
   async create(member: Omit<OrganizationMember, 'id'>): Promise<OrganizationMember> {
+    const createdId = getOrganizationMembershipId(member.organizationId, member.userId);
+    const ref = doc(this.collectionPath, createdId);
+    const createdMember: OrganizationMember = {
+      ...member,
+      id: createdId
+    };
+
     try {
-      const ref = doc(this.collectionPath);
-      const createdId = ref.id;
-      const createdMember: OrganizationMember = {
-        ...member,
-        id: createdId
-      };
-      await setDoc(ref, mapOrganizationMemberToFirestore(createdMember));
+      await runTransaction(firestore, async (transaction) => {
+        const existingMember = await transaction.get(ref);
+        if (existingMember.exists()) {
+          throw new RepositoryConflictError('Organization membership already exists.');
+        }
+
+        transaction.set(ref, mapOrganizationMemberToFirestore(createdMember));
+      });
       return createdMember;
-    } catch {
+    } catch (error) {
+      if (error instanceof RepositoryConflictError) {
+        throw error;
+      }
       throw new RepositoryInfrastructureError('Failed to create organization member.');
     }
   }

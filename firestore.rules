@@ -15,6 +15,22 @@ service cloud.firestore {
       return isAuthenticated() && getCurrentUserId() == userId;
     }
 
+    // Membership IDs are `${resourceId}_${userId}`. This exact convention is
+    // shared with src/repositories/membershipIds.ts.
+    function isActiveOrganizationMember(organizationId) {
+      let membershipPath = /databases/$(database)/documents/organizationMembers/$(organizationId + "_" + request.auth.uid);
+      return isAuthenticated() &&
+        exists(membershipPath) &&
+        get(membershipPath).data.status == "active";
+    }
+
+    function isActiveEventMember(eventId) {
+      let membershipPath = /databases/$(database)/documents/eventMembers/$(eventId + "_" + request.auth.uid);
+      return isAuthenticated() &&
+        exists(membershipPath) &&
+        get(membershipPath).data.status == "active";
+    }
+
     // Default deny all
     match /{document=**} {
       allow read, write: if false;
@@ -42,11 +58,9 @@ service cloud.firestore {
     }
 
     // Organization rules
-    // organizations/{organizationId} — access checked by application authorization service
-    // Rules enforce: deny arbitrary writes, authentication required for reads
+    // organizations/{organizationId} — active organization membership required
     match /organizations/{organizationId} {
-      // Authenticated user may attempt read (application will verify membership)
-      allow read: if isAuthenticated();
+      allow read: if isActiveOrganizationMember(organizationId);
 
       // Deny all writes (organization management is server-side only)
       allow write: if false;
@@ -64,11 +78,9 @@ service cloud.firestore {
     }
 
     // Event rules
-    // events/{eventId} — access checked by application authorization service
-    // Rules enforce: deny arbitrary writes, authentication required for reads
+    // events/{eventId} — active event membership required
     match /events/{eventId} {
-      // Authenticated user may attempt read (application will verify membership)
-      allow read: if isAuthenticated();
+      allow read: if isActiveEventMember(eventId);
 
       // Deny all writes (event management is server-side only)
       allow write: if false;

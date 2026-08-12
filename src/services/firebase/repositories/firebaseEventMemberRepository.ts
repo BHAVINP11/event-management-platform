@@ -1,8 +1,9 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, runTransaction, updateDoc, where } from 'firebase/firestore';
 import { firestore } from '@/services/firebase/firestore';
 import { EventMember, EventRole, MembershipStatus } from '@/types/membership';
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
-import { RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { RepositoryConflictError, RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { getEventMembershipId } from '@/repositories/membershipIds';
 import { getOptionalString, getRequiredString, getValidatedEnum } from '@/services/firebase/repositories/firestoreMapping';
 
 const eventMembersCollection = 'eventMembers';
@@ -54,16 +55,27 @@ export class FirebaseEventMemberRepository implements EventMemberRepository {
   }
 
   async create(member: Omit<EventMember, 'id'>): Promise<EventMember> {
+    const createdId = getEventMembershipId(member.eventId, member.userId);
+    const ref = doc(this.collectionPath, createdId);
+    const createdMember: EventMember = {
+      ...member,
+      id: createdId
+    };
+
     try {
-      const ref = doc(this.collectionPath);
-      const createdId = ref.id;
-      const createdMember: EventMember = {
-        ...member,
-        id: createdId
-      };
-      await setDoc(ref, mapEventMemberToFirestore(createdMember));
+      await runTransaction(firestore, async (transaction) => {
+        const existingMember = await transaction.get(ref);
+        if (existingMember.exists()) {
+          throw new RepositoryConflictError('Event membership already exists.');
+        }
+
+        transaction.set(ref, mapEventMemberToFirestore(createdMember));
+      });
       return createdMember;
-    } catch {
+    } catch (error) {
+      if (error instanceof RepositoryConflictError) {
+        throw error;
+      }
       throw new RepositoryInfrastructureError('Failed to create event member.');
     }
   }

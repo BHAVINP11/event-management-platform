@@ -2,8 +2,7 @@ import { OrganizationMemberRepository } from '@/repositories/interfaces/organiza
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
 import { AuthorizationResult } from '@/features/auth/types/authorization';
 import { MembershipStatus } from '@/types/membership';
-import { OrganizationMember } from '@/types/organizationMember';
-import { EventMember } from '@/types/eventMember';
+import { OrganizationMember, EventMember } from '@/types/membership';
 
 export class AuthorizationService {
   constructor(
@@ -109,4 +108,3 @@ export class AuthorizationService {
     }
   }
 }
-

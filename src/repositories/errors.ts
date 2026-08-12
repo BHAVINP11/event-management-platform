@@ -18,3 +18,10 @@ export class RepositoryDataError extends RepositoryError {
     this.name = 'RepositoryDataError';
   }
 }
+
+export class RepositoryConflictError extends RepositoryError {
+  constructor(message = 'Repository conflict') {
+    super(message);
+    this.name = 'RepositoryConflictError';
+  }
+}
