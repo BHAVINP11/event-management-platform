@@ -12,6 +12,11 @@ const mapFirebaseUserToAuthUser = async (firebaseUser: FirebaseUser): Promise<Us
   return profile;
 };
 
+const handleMissingProfile = async (): Promise<null> => {
+  await firebaseSignOut(auth);
+  return null;
+};
+
 export const signUp = async (payload: SignUpPayload): Promise<User> => {
   const userCredential = await createUserWithEmailAndPassword(auth, payload.email, payload.password);
   const firebaseUser = userCredential.user;
@@ -59,7 +64,8 @@ export const subscribeToAuthState = (callback: (user: User | null) => void): Ret
     try {
       const appUser = await mapFirebaseUserToAuthUser(firebaseUser);
       callback(appUser);
-    } catch {
+    } catch (error) {
+      await handleMissingProfile();
       callback(null);
     }
   });
