@@ -151,6 +151,99 @@ The membership schema is intentionally extensible:
 
 This keeps the data model open for planner, couple, family, and guest permission requirements later.
 
-## 10. Security considerations
+## 10. Security Considerations
 
-Firestore security rules are intentionally not finalized in this step. Final authorization rules will be implemented in the authorization phase after the membership access model is defined.
+### Rules Philosophy
+
+Firestore Security Rules are the actual security boundary and must be enforced at the database layer.
+
+**Default Policy: DENY All Access**
+
+By default, no one can read or write any document. Specific rules grant limited, intentional access.
+
+### Rule Summary
+
+- **User Profiles** (`users/{userId}`):
+  - User can read their own profile
+  - User can create their own profile (on signup)
+  - User can update their own profile
+  - No one can delete user profiles via rules
+  - Example: User `abc123` can access `users/abc123` but not `users/xyz789`
+
+- **Organizations** (`organizations/{organizationId}`):
+  - Authenticated users can read organizations
+  - No direct writes allowed (creation/updates handled server-side via Admin SDK)
+  - Authorization service verifies membership before application grants access
+
+- **Organization Memberships** (`organizationMembers/{membershipId}`):
+  - User can read their own memberships only
+  - No direct writes allowed (Admin SDK only)
+
+- **Events** (`events/{eventId`):
+  - Authenticated users can read events
+  - No direct writes allowed (creation/updates handled server-side)
+  - Authorization service verifies membership before application grants access
+
+- **Event Memberships** (`eventMembers/{membershipId`):
+  - User can read their own memberships only
+  - No direct writes allowed (Admin SDK only)
+
+### Authorization Service Pattern
+
+Firestore Security Rules are simple and intentionally permissive at the collection level.
+
+The actual authorization (membership verification) is delegated to the application layer via the `AuthorizationService`:
+
+1. Rule allows authenticated users to read events
+2. Application calls `authorizationService.canAccessEvent(userId, eventId)`
+3. Authorization service queries `eventMembers` collection by userId and checks status
+4. If active membership exists, application grants access; otherwise, denies
+
+**Why:** Firestore Security Rules cannot efficiently query across multiple documents. A rule cannot easily ask "does this user have an active membership in org X?" Instead, rules provide basic access to collections, and the application layer performs membership verification.
+
+### Membership Lookup Constraints
+
+Current membership document design uses Firestore-generated IDs:
+
+- `organizationMembers/{generatedId}`
+- `eventMembers/{generatedId}`
+
+This means:
+
+- Rules cannot directly check membership via path (e.g., `organizationMembers/user123:org456`)
+- Application must query the membership collection by userId
+
+**Future optimization:** If access patterns require it, consider:
+
+- Adding a secondary collection like `userMemberships/{userId}/organizations/{organizationId}` for faster lookup
+- Using Firestore composite indexes to optimize membership queries
+- For now, collection queries are sufficient
+
+### Testing Rules
+
+Security rules are tested via `tests/firestore.rules.test.ts` using the Firebase Rules Unit Testing library.
+
+Run tests:
+
+```bash
+npm run test:rules
+```
+
+This uses the Firebase Emulator locally and does not require production credentials.
+
+### Security Boundary
+
+**Do Not Rely On:**
+
+- UI route guards (not security)
+- Hidden buttons or disabled form fields (not security)
+- Application-only checks (not security)
+
+**Security Boundary:**
+
+- Firestore Security Rules (database layer)
+- Server-side API (if added later)
+
+### Related Documentation
+
+See `docs/authorization.md` for detailed authorization model documentation.

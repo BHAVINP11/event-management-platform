@@ -1,0 +1,88 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getCurrentUserId() {
+      return request.auth.uid;
+    }
+
+    function isOwnProfile(userId) {
+      return isAuthenticated() && getCurrentUserId() == userId;
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User profile rules
+    // users/{userId} — user can only read/write their own profile
+    match /users/{userId} {
+      allow read: if isOwnProfile(userId);
+
+      allow create: if isOwnProfile(userId) && 
+        request.resource.data.keys().hasOnly(['id', 'firstName', 'lastName', 'displayName', 'email', 'phone', 'avatarUrl', 'createdAt', 'updatedAt']) &&
+        request.resource.data.id == userId &&
+        request.resource.data.firstName is string &&
+        request.resource.data.lastName is string &&
+        request.resource.data.displayName is string &&
+        request.resource.data.email is string &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.updatedAt is string;
+
+      allow update: if isOwnProfile(userId) &&
+        request.resource.data.keys().hasOnly(['id', 'firstName', 'lastName', 'displayName', 'email', 'phone', 'avatarUrl', 'createdAt', 'updatedAt']) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // Organization rules
+    // organizations/{organizationId} — access checked by application authorization service
+    // Rules enforce: deny arbitrary writes, authentication required for reads
+    match /organizations/{organizationId} {
+      // Authenticated user may attempt read (application will verify membership)
+      allow read: if isAuthenticated();
+
+      // Deny all writes (organization management is server-side only)
+      allow write: if false;
+    }
+
+    // Organization membership rules
+    // organizationMembers/{membershipId} — user can read their own memberships
+    match /organizationMembers/{membershipId} {
+      // User may read only if userId in document matches authenticated user
+      allow read: if isAuthenticated() && 
+        resource.data.userId == getCurrentUserId();
+
+      // Deny all writes (membership creation/management is server-side only)
+      allow write: if false;
+    }
+
+    // Event rules
+    // events/{eventId} — access checked by application authorization service
+    // Rules enforce: deny arbitrary writes, authentication required for reads
+    match /events/{eventId} {
+      // Authenticated user may attempt read (application will verify membership)
+      allow read: if isAuthenticated();
+
+      // Deny all writes (event management is server-side only)
+      allow write: if false;
+    }
+
+    // Event membership rules
+    // eventMembers/{membershipId} — user can read their own memberships
+    match /eventMembers/{membershipId} {
+      // User may read only if userId in document matches authenticated user
+      allow read: if isAuthenticated() && 
+        resource.data.userId == getCurrentUserId();
+
+      // Deny all writes (membership creation/management is server-side only)
+      allow write: if false;
+    }
+  }
+}
