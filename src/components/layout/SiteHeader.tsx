@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export function SiteHeader() {
+export function SiteHeader(): JSX.Element {
   return (
     <header style={{ padding: '1rem 0', borderBottom: '1px solid #e2e8f0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: 1100, margin: '0 auto', padding: '0 1rem' }}>

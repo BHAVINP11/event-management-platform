@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export function NotFoundPage() {
+export function NotFoundPage(): JSX.Element {
   return (
     <section>
       <h1>Page Not Found</h1>

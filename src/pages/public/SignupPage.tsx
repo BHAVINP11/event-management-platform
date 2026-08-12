@@ -1,4 +1,4 @@
-export function SignupPage() {
+export function SignupPage(): JSX.Element {
   return (
     <section>
       <h1>Sign Up</h1>

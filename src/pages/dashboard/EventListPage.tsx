@@ -1,4 +1,4 @@
-export function EventListPage() {
+export function EventListPage(): JSX.Element {
   return (
     <section>
       <h1>Events</h1>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export function HomePage() {
+export function HomePage(): JSX.Element {
   return (
     <section>
       <h1>Event Management Platform</h1>

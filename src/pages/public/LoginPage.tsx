@@ -1,4 +1,4 @@
-export function LoginPage() {
+export function LoginPage(): JSX.Element {
   return (
     <section>
       <h1>Login</h1>

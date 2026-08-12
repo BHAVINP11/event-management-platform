@@ -8,7 +8,7 @@ import { EventListPage } from '@/pages/dashboard/EventListPage';
 import { EventDetailPage } from '@/pages/dashboard/EventDetailPage';
 import { NotFoundPage } from '@/pages/public/NotFoundPage';
 
-export function AppRouter() {
+export function AppRouter(): JSX.Element {
   return (
     <Routes>
       <Route element={<PageShell />}>

@@ -1,4 +1,4 @@
-export function DashboardPage() {
+export function DashboardPage(): JSX.Element {
   return (
     <section>
       <h1>Dashboard</h1>

@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
 
-export function Container({ children }: PropsWithChildren) {
+export function Container({ children }: PropsWithChildren): JSX.Element {
   return <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem' }}>{children}</div>;
 }

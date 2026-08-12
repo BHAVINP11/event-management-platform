@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 
-export function EventDetailPage() {
+export function EventDetailPage(): JSX.Element {
   const { eventId } = useParams<{ eventId: string }>();
 
   return (
