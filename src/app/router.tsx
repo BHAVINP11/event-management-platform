@@ -7,6 +7,9 @@ import { SecureDashboardPage } from '@/pages/dashboard/SecureDashboardPage';
 import { EventListPage } from '@/pages/dashboard/EventListPage';
 import { EventDetailPage } from '@/pages/dashboard/EventDetailPage';
 import { NotFoundPage } from '@/pages/public/NotFoundPage';
+import { OnboardingTypePage } from '@/pages/onboarding/OnboardingTypePage';
+import { PlannerOnboardingPage } from '@/pages/onboarding/PlannerOnboardingPage';
+import { IndividualEventOnboardingPage } from '@/pages/onboarding/IndividualEventOnboardingPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PublicRoute } from '@/components/auth/PublicRoute';
 
@@ -17,6 +20,9 @@ export function AppRouter(): JSX.Element {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingTypePage /></ProtectedRoute>} />
+        <Route path="/onboarding/planner" element={<ProtectedRoute><PlannerOnboardingPage /></ProtectedRoute>} />
+        <Route path="/onboarding/event" element={<ProtectedRoute><IndividualEventOnboardingPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><SecureDashboardPage /></ProtectedRoute>} />
         <Route path="/events" element={<ProtectedRoute><EventListPage /></ProtectedRoute>} />
         <Route path="/events/:eventId" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
