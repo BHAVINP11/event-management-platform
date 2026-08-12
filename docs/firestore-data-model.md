@@ -153,6 +153,4 @@ This keeps the data model open for planner, couple, family, and guest permission
 
 ## 10. Security considerations
 
-Security rules are not finalized in this step. A placeholder rule set is provided to deny access by default.
-
-Final authorization logic will be implemented once membership and event access rules are defined.
+Firestore security rules are intentionally not finalized in this step. Final authorization rules will be implemented in the authorization phase after the membership access model is defined.

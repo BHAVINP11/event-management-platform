@@ -2,7 +2,8 @@ import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/services/firebase/firestore';
 import { User } from '@/types/user';
 import { UserRepository } from '@/repositories/interfaces/userRepository';
-import { RepositoryInfrastructureError } from '@/repositories/errors';
+import { RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { getRequiredString, getOptionalString } from '@/services/firebase/repositories/firestoreMapping';
 
 const usersCollection = 'users';
 
@@ -19,16 +20,20 @@ const mapUserToFirestore = (user: User): Record<string, unknown> => ({
 });
 
 const mapFirestoreToUser = (userId: string, data: Record<string, unknown>): User => {
+  if (!data || typeof data !== 'object') {
+    throw new RepositoryDataError('Invalid user document.');
+  }
+
   return {
     id: userId,
-    firstName: String(data.firstName ?? ''),
-    lastName: String(data.lastName ?? ''),
-    displayName: String(data.displayName ?? ''),
-    email: String(data.email ?? ''),
-    phone: typeof data.phone === 'string' ? data.phone : undefined,
-    avatarUrl: typeof data.avatarUrl === 'string' ? data.avatarUrl : undefined,
-    createdAt: String(data.createdAt ?? ''),
-    updatedAt: String(data.updatedAt ?? '')
+    firstName: getRequiredString(data.firstName, 'firstName'),
+    lastName: getRequiredString(data.lastName, 'lastName'),
+    displayName: getRequiredString(data.displayName, 'displayName'),
+    email: getRequiredString(data.email, 'email'),
+    phone: getOptionalString(data.phone),
+    avatarUrl: getOptionalString(data.avatarUrl),
+    createdAt: getRequiredString(data.createdAt, 'createdAt'),
+    updatedAt: getRequiredString(data.updatedAt, 'updatedAt')
   };
 };
 

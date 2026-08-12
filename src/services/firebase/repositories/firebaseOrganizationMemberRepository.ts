@@ -1,10 +1,14 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { firestore } from '@/services/firebase/firestore';
-import { OrganizationMember } from '@/types/membership';
+import { OrganizationMember, OrganizationRole, MembershipStatus } from '@/types/membership';
 import { OrganizationMemberRepository } from '@/repositories/interfaces/organizationMemberRepository';
-import { RepositoryInfrastructureError } from '@/repositories/errors';
+import { RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { getRequiredString, getValidatedEnum } from '@/services/firebase/repositories/firestoreMapping';
 
 const organizationMembersCollection = 'organizationMembers';
+
+const validOrganizationRoles = Object.values(OrganizationRole) as readonly OrganizationMember['role'][];
+const validMembershipStatuses = Object.values(MembershipStatus) as readonly OrganizationMember['status'][];
 
 const mapOrganizationMemberToFirestore = (member: OrganizationMember): Record<string, unknown> => ({
   id: member.id,
@@ -16,15 +20,21 @@ const mapOrganizationMemberToFirestore = (member: OrganizationMember): Record<st
   updatedAt: member.updatedAt
 });
 
-const mapFirestoreToOrganizationMember = (memberId: string, data: Record<string, unknown>): OrganizationMember => ({
-  id: memberId,
-  organizationId: String(data.organizationId ?? ''),
-  userId: String(data.userId ?? ''),
-  role: String(data.role ?? '') as OrganizationMember['role'],
-  status: String(data.status ?? '') as OrganizationMember['status'],
-  createdAt: String(data.createdAt ?? ''),
-  updatedAt: String(data.updatedAt ?? '')
-});
+const mapFirestoreToOrganizationMember = (memberId: string, data: Record<string, unknown>): OrganizationMember => {
+  if (!data || typeof data !== 'object') {
+    throw new RepositoryDataError('Invalid organization member document.');
+  }
+
+  return {
+    id: memberId,
+    organizationId: getRequiredString(data.organizationId, 'organizationId'),
+    userId: getRequiredString(data.userId, 'userId'),
+    role: getValidatedEnum(data.role, 'role', validOrganizationRoles),
+    status: getValidatedEnum(data.status, 'status', validMembershipStatuses),
+    createdAt: getRequiredString(data.createdAt, 'createdAt'),
+    updatedAt: getRequiredString(data.updatedAt, 'updatedAt')
+  };
+};
 
 export class FirebaseOrganizationMemberRepository implements OrganizationMemberRepository {
   private collectionPath = collection(firestore, organizationMembersCollection);

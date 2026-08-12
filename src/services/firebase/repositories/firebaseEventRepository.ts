@@ -1,10 +1,14 @@
 import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/services/firebase/firestore';
-import { Event } from '@/types/event';
+import { Event, EventType, EventStatus } from '@/types/event';
 import { EventRepository } from '@/repositories/interfaces/eventRepository';
-import { RepositoryInfrastructureError } from '@/repositories/errors';
+import { RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { getNullableString, getOptionalString, getRequiredString, getValidatedEnum } from '@/services/firebase/repositories/firestoreMapping';
 
 const eventsCollection = 'events';
+
+const validEventTypes = Object.values(EventType) as readonly Event['type'][];
+const validEventStatuses = Object.values(EventStatus) as readonly Event['status'][];
 
 const mapEventToFirestore = (event: Event): Record<string, unknown> => ({
   id: event.id,
@@ -23,22 +27,28 @@ const mapEventToFirestore = (event: Event): Record<string, unknown> => ({
   updatedAt: event.updatedAt
 });
 
-const mapFirestoreToEvent = (eventId: string, data: Record<string, unknown>): Event => ({
-  id: eventId,
-  name: String(data.name ?? ''),
-  type: String(data.type ?? 'other') as Event['type'],
-  description: typeof data.description === 'string' ? data.description : undefined,
-  startDate: typeof data.startDate === 'string' ? data.startDate : undefined,
-  endDate: typeof data.endDate === 'string' ? data.endDate : undefined,
-  timezone: typeof data.timezone === 'string' ? data.timezone : undefined,
-  venueName: typeof data.venueName === 'string' ? data.venueName : undefined,
-  venueAddress: typeof data.venueAddress === 'string' ? data.venueAddress : undefined,
-  organizationId: data.organizationId === null ? null : typeof data.organizationId === 'string' ? data.organizationId : undefined,
-  createdBy: String(data.createdBy ?? ''),
-  status: String(data.status ?? 'draft') as Event['status'],
-  createdAt: String(data.createdAt ?? ''),
-  updatedAt: String(data.updatedAt ?? '')
-});
+const mapFirestoreToEvent = (eventId: string, data: Record<string, unknown>): Event => {
+  if (!data || typeof data !== 'object') {
+    throw new RepositoryDataError('Invalid event document.');
+  }
+
+  return {
+    id: eventId,
+    name: getRequiredString(data.name, 'name'),
+    type: getValidatedEnum(data.type, 'type', validEventTypes),
+    description: getOptionalString(data.description),
+    startDate: getOptionalString(data.startDate),
+    endDate: getOptionalString(data.endDate),
+    timezone: getOptionalString(data.timezone),
+    venueName: getOptionalString(data.venueName),
+    venueAddress: getOptionalString(data.venueAddress),
+    organizationId: getNullableString(data.organizationId),
+    createdBy: getRequiredString(data.createdBy, 'createdBy'),
+    status: getValidatedEnum(data.status, 'status', validEventStatuses),
+    createdAt: getRequiredString(data.createdAt, 'createdAt'),
+    updatedAt: getRequiredString(data.updatedAt, 'updatedAt')
+  };
+};
 
 export class FirebaseEventRepository implements EventRepository {
   private collectionPath = collection(firestore, eventsCollection);

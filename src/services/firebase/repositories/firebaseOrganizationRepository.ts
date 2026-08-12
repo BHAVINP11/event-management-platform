@@ -2,7 +2,8 @@ import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/services/firebase/firestore';
 import { Organization } from '@/types/organization';
 import { OrganizationRepository } from '@/repositories/interfaces/organizationRepository';
-import { RepositoryInfrastructureError } from '@/repositories/errors';
+import { RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
+import { getOptionalString, getRequiredString } from '@/services/firebase/repositories/firestoreMapping';
 
 const organizationsCollection = 'organizations';
 
@@ -18,17 +19,23 @@ const mapOrganizationToFirestore = (organization: Organization): Record<string, 
   updatedAt: organization.updatedAt
 });
 
-const mapFirestoreToOrganization = (organizationId: string, data: Record<string, unknown>): Organization => ({
-  id: organizationId,
-  name: String(data.name ?? ''),
-  slug: String(data.slug ?? ''),
-  logoUrl: typeof data.logoUrl === 'string' ? data.logoUrl : undefined,
-  description: typeof data.description === 'string' ? data.description : undefined,
-  contactEmail: String(data.contactEmail ?? ''),
-  contactPhone: typeof data.contactPhone === 'string' ? data.contactPhone : undefined,
-  createdAt: String(data.createdAt ?? ''),
-  updatedAt: String(data.updatedAt ?? '')
-});
+const mapFirestoreToOrganization = (organizationId: string, data: Record<string, unknown>): Organization => {
+  if (!data || typeof data !== 'object') {
+    throw new RepositoryDataError('Invalid organization document.');
+  }
+
+  return {
+    id: organizationId,
+    name: getRequiredString(data.name, 'name'),
+    slug: getRequiredString(data.slug, 'slug'),
+    logoUrl: getOptionalString(data.logoUrl),
+    description: getOptionalString(data.description),
+    contactEmail: getRequiredString(data.contactEmail, 'contactEmail'),
+    contactPhone: getOptionalString(data.contactPhone),
+    createdAt: getRequiredString(data.createdAt, 'createdAt'),
+    updatedAt: getRequiredString(data.updatedAt, 'updatedAt')
+  };
+};
 
 export class FirebaseOrganizationRepository implements OrganizationRepository {
   private collectionPath = collection(firestore, organizationsCollection);

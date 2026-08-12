@@ -11,3 +11,10 @@ export class RepositoryInfrastructureError extends RepositoryError {
     this.name = 'RepositoryInfrastructureError';
   }
 }
+
+export class RepositoryDataError extends RepositoryError {
+  constructor(message = 'Repository data validation error') {
+    super(message);
+    this.name = 'RepositoryDataError';
+  }
+}
