@@ -1,8 +1,5 @@
+import { LoginForm } from '@/features/auth/components/LoginForm';
+
 export function LoginPage(): JSX.Element {
-  return (
-    <section>
-      <h1>Login</h1>
-      <p>Login will be implemented later once authentication is added.</p>
-    </section>
-  );
+  return <LoginForm />;
 }

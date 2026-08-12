@@ -1,8 +1,5 @@
+import { SignupForm } from '@/features/auth/components/SignupForm';
+
 export function SignupPage(): JSX.Element {
-  return (
-    <section>
-      <h1>Sign Up</h1>
-      <p>Sign up will be implemented later once authentication is added.</p>
-    </section>
-  );
+  return <SignupForm />;
 }

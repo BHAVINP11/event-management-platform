@@ -71,4 +71,4 @@ This repository is currently in the foundation phase. It includes:
    - `VITE_FIREBASE_APP_ID`
 3. Do not commit `.env`.
 
-For more information, see `docs/firebase-setup.md` and `docs/firebase-architecture.md`.
+For more information, see `docs/firebase-setup.md`, `docs/firebase-architecture.md`, and `docs/authentication.md`.
