@@ -58,3 +58,17 @@ This repository is currently in the foundation phase. It includes:
 - `npm run preview`
 - `npm run lint`
 - `npm run format`
+
+## Local Environment Setup
+
+1. Copy `.env.example` to `.env`.
+2. Fill in the required Firebase keys:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
+3. Do not commit `.env`.
+
+For more information, see `docs/firebase-setup.md` and `docs/firebase-architecture.md`.
