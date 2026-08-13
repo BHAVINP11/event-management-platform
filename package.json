@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "format": "prettier --check .",
+    "test": "jest tests/unit",
+    "test:unit": "jest tests/unit",
     "test:rules": "firebase emulators:exec --project=event-management-test --only=firestore 'jest tests/firestore.rules.test.ts'"
   },
   "dependencies": {

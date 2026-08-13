@@ -20,8 +20,8 @@ Event Management Platform is a production-ready foundation for a multi-tenant Sa
 
 - `src/app/` - App entrypoint, React router, and providers
 - `src/components/` - Shared UI patterns, layout, and reusable components
-- `src/features/` - Feature-oriented areas such as auth, organizations, onboarding, and events
-- `src/pages/` - Route-driven pages for public, marketing, onboarding, and dashboard views
+- `src/features/` - Feature-oriented areas such as auth, onboarding, dashboard, and events
+- `src/pages/` - Route-driven pages for public, marketing, and onboarding views
 - `src/services/` - Integration layers and service wrappers
 - `src/hooks/` - Reusable React hooks
 - `src/lib/` - Shared logic, helpers, and utilities
@@ -43,7 +43,8 @@ This repository is currently in the foundation and onboarding phase. It includes
 - Firestore data persistence with security rules
 - Trusted Cloud Functions backend (Firebase)
 - Onboarding flows for event planners and individual event owners
-- Placeholder routes for `/`, `/login`, `/signup`, `/onboarding`, `/dashboard`, `/events`, and `/events/:eventId`
+- A `/dashboard` that lists the organizations and events the authenticated user actively belongs to (see [docs/dashboard.md](docs/dashboard.md))
+- An authorization-checked `/events/:eventId` placeholder page, and placeholder `/events/new`
 - A Not Found page
 
 ## Technology Stack
@@ -63,6 +64,7 @@ This repository is currently in the foundation and onboarding phase. It includes
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 - `npm run format` - Check Prettier formatting
+- `npm run test` / `npm run test:unit` - Run unit tests
 - `npm run test:rules` - Test Firestore security rules
 - `firebase emulators:start` - Start Firebase emulators (Auth, Firestore, Functions)
 

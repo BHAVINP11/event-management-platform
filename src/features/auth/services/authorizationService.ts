@@ -1,8 +1,19 @@
 import { OrganizationMemberRepository } from '@/repositories/interfaces/organizationMemberRepository';
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
 import { AuthorizationResult } from '@/features/auth/types/authorization';
-import { MembershipStatus } from '@/types/membership';
+import { MembershipStatus, OrganizationRole } from '@/types/membership';
 import { OrganizationMember, EventMember } from '@/types/membership';
+
+/**
+ * Organization roles that are expected to manage events on behalf of the
+ * organization. Used only to decide whether event-creation entry points are
+ * offered in the UI; the trusted backend remains the authority on creation.
+ */
+const eventCreationOrganizationRoles: readonly OrganizationRole[] = [
+  OrganizationRole.Owner,
+  OrganizationRole.Admin,
+  OrganizationRole.Planner
+];
 
 export class AuthorizationService {
   constructor(
@@ -82,29 +93,40 @@ export class AuthorizationService {
     }
   }
 
+  /**
+   * Active organization memberships for the user.
+   *
+   * Repository failures propagate: callers must distinguish "no access" from
+   * "could not be determined" rather than rendering an empty result.
+   */
   async getUserOrganizations(userId: string): Promise<OrganizationMember[]> {
     if (!userId) {
       return [];
     }
 
-    try {
-      const memberships = await this.organizationMemberRepository.listByUser(userId);
-      return memberships.filter((m) => m.status === MembershipStatus.Active);
-    } catch {
-      return [];
-    }
+    const memberships = await this.organizationMemberRepository.listByUser(userId);
+    return memberships.filter((m) => m.status === MembershipStatus.Active);
   }
 
+  /** Active event memberships for the user. Repository failures propagate. */
   async getUserEvents(userId: string): Promise<EventMember[]> {
     if (!userId) {
       return [];
     }
 
-    try {
-      const memberships = await this.eventMemberRepository.listByUser(userId);
-      return memberships.filter((m) => m.status === MembershipStatus.Active);
-    } catch {
-      return [];
-    }
+    const memberships = await this.eventMemberRepository.listByUser(userId);
+    return memberships.filter((m) => m.status === MembershipStatus.Active);
+  }
+
+  /**
+   * Whether an organization membership implies the user is expected to create
+   * events for that organization. Pure so callers can reuse memberships they
+   * have already loaded instead of issuing another read.
+   */
+  canCreateEventInOrganization(membership: OrganizationMember): boolean {
+    return (
+      membership.status === MembershipStatus.Active &&
+      eventCreationOrganizationRoles.includes(membership.role)
+    );
   }
 }

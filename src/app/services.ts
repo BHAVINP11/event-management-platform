@@ -1,0 +1,37 @@
+import { FirebaseOrganizationRepository } from '@/services/firebase/repositories/firebaseOrganizationRepository';
+import { FirebaseOrganizationMemberRepository } from '@/services/firebase/repositories/firebaseOrganizationMemberRepository';
+import { FirebaseEventRepository } from '@/services/firebase/repositories/firebaseEventRepository';
+import { FirebaseEventMemberRepository } from '@/services/firebase/repositories/firebaseEventMemberRepository';
+import { AuthorizationService } from '@/features/auth/services/authorizationService';
+import { DashboardService } from '@/features/dashboard/services/dashboardService';
+import { EventAccessService } from '@/features/events/services/eventAccessService';
+
+/**
+ * Composition root.
+ *
+ * The only place where Firebase repository implementations are bound to the
+ * services that consume them. Feature services depend on repository interfaces
+ * and are constructed here, which keeps Firestore out of feature and UI code.
+ */
+
+const organizationRepository = new FirebaseOrganizationRepository();
+const organizationMemberRepository = new FirebaseOrganizationMemberRepository();
+const eventRepository = new FirebaseEventRepository();
+const eventMemberRepository = new FirebaseEventMemberRepository();
+
+export const authorizationService = new AuthorizationService(
+  organizationMemberRepository,
+  eventMemberRepository
+);
+
+export const dashboardService = new DashboardService(
+  authorizationService,
+  organizationRepository,
+  eventRepository
+);
+
+export const eventAccessService = new EventAccessService(
+  authorizationService,
+  eventRepository,
+  organizationRepository
+);

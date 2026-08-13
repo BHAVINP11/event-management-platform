@@ -3,9 +3,9 @@ import { PageShell } from '@/components/layout/PageShell';
 import { HomePage } from '@/pages/public/HomePage';
 import { LoginPage } from '@/pages/public/LoginPage';
 import { SignupPage } from '@/pages/public/SignupPage';
-import { SecureDashboardPage } from '@/pages/dashboard/SecureDashboardPage';
-import { EventListPage } from '@/pages/dashboard/EventListPage';
-import { EventDetailPage } from '@/pages/dashboard/EventDetailPage';
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
+import { EventWorkspacePage } from '@/features/events/pages/EventWorkspacePage';
+import { EventCreatePage } from '@/features/events/pages/EventCreatePage';
 import { NotFoundPage } from '@/pages/public/NotFoundPage';
 import { OnboardingTypePage } from '@/pages/onboarding/OnboardingTypePage';
 import { PlannerOnboardingPage } from '@/pages/onboarding/PlannerOnboardingPage';
@@ -23,9 +23,11 @@ export function AppRouter(): JSX.Element {
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingTypePage /></ProtectedRoute>} />
         <Route path="/onboarding/planner" element={<ProtectedRoute><PlannerOnboardingPage /></ProtectedRoute>} />
         <Route path="/onboarding/event" element={<ProtectedRoute><IndividualEventOnboardingPage /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><SecureDashboardPage /></ProtectedRoute>} />
-        <Route path="/events" element={<ProtectedRoute><EventListPage /></ProtectedRoute>} />
-        <Route path="/events/:eventId" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        {/* The dashboard is the single list of accessible events. */}
+        <Route path="/events" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/events/new" element={<ProtectedRoute><EventCreatePage /></ProtectedRoute>} />
+        <Route path="/events/:eventId" element={<ProtectedRoute><EventWorkspacePage /></ProtectedRoute>} />
       </Route>
       <Route path="/404" element={<NotFoundPage />} />
       <Route path="*" element={<Navigate to="/404" replace />} />

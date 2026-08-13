@@ -210,4 +210,55 @@ describe('Firestore Security Rules', () => {
       await expect(testEnv.authenticatedContext('user1').firestore().collection('eventMembers').doc(memberId).set(eventMember('event1', 'user1', 'active'))).rejects.toThrow();
     });
   });
+
+  // The dashboard discovers resources by listing the current user's memberships
+  // and then reading the referenced documents one by one. These tests pin that
+  // read pattern to the rules, and confirm the rules remain the boundary even
+  // though the dashboard also filters client-side.
+  describe('Dashboard discovery reads', () => {
+    test('user can list their own organization memberships', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user1')).set(organizationMember('org1', 'user1', 'active'));
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org2', 'user2')).set(organizationMember('org2', 'user2', 'active'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('organizationMembers').where('userId', '==', 'user1').get();
+      expect(snapshot.docs).toHaveLength(1);
+    });
+
+    test('user can list their own event memberships', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event2', 'user2')).set(eventMember('event2', 'user2', 'active'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('eventMembers').where('userId', '==', 'user1').get();
+      expect(snapshot.docs).toHaveLength(1);
+    });
+
+    test('user cannot list memberships belonging to another user', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).set(eventMember('event1', 'user2', 'active')));
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('eventMembers').where('userId', '==', 'user2').get()).rejects.toThrow();
+    });
+
+    test('user cannot list every membership', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active')));
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('eventMembers').get()).rejects.toThrow();
+    });
+
+    test('user cannot enumerate events or organizations', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('events').doc('event1').set(event());
+        await adminDb.firestore().collection('organizations').doc('org1').set(organization());
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user1')).set(organizationMember('org1', 'user1', 'active'));
+      });
+
+      const db = testEnv.authenticatedContext('user1').firestore();
+      await expect(db.collection('events').get()).rejects.toThrow();
+      await expect(db.collection('organizations').get()).rejects.toThrow();
+    });
+  });
 });
