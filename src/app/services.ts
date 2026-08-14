@@ -6,6 +6,7 @@ import { FirebaseInvitationRepository } from '@/services/firebase/repositories/f
 import { FirebaseUserRepository } from '@/services/firebase/repositories/firebaseUserRepository';
 import { FirebaseGuestRepository } from '@/services/firebase/repositories/firebaseGuestRepository';
 import { FirebaseFunctionRepository } from '@/services/firebase/repositories/firebaseFunctionRepository';
+import { FirebaseExpenseRepository } from '@/services/firebase/repositories/firebaseExpenseRepository';
 import { AuthorizationService } from '@/features/auth/services/authorizationService';
 import { DashboardService } from '@/features/dashboard/services/dashboardService';
 import { EventAccessService } from '@/features/events/services/eventAccessService';
@@ -14,6 +15,7 @@ import { EventPeopleService } from '@/features/events/services/eventPeopleServic
 import { InvitationService } from '@/features/events/services/invitationService';
 import { GuestService } from '@/features/events/services/guestService';
 import { FunctionService } from '@/features/events/services/functionService';
+import { ExpenseService } from '@/features/events/services/expenseService';
 
 /**
  * Composition root.
@@ -31,6 +33,7 @@ const invitationRepository = new FirebaseInvitationRepository();
 const userRepository = new FirebaseUserRepository();
 const guestRepository = new FirebaseGuestRepository();
 const functionRepository = new FirebaseFunctionRepository();
+const expenseRepository = new FirebaseExpenseRepository();
 
 export const authorizationService = new AuthorizationService(
   organizationMemberRepository,
@@ -64,3 +67,5 @@ export const invitationService = new InvitationService();
 export const guestService = new GuestService(authorizationService, eventRepository, guestRepository);
 
 export const functionService = new FunctionService(authorizationService, eventRepository, functionRepository);
+
+export const expenseService = new ExpenseService(authorizationService, eventRepository, expenseRepository);

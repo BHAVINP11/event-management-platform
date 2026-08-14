@@ -6,6 +6,7 @@ import { InvitationRepository } from '@/repositories/interfaces/invitationReposi
 import { UserRepository } from '@/repositories/interfaces/userRepository';
 import { GuestRepository } from '@/repositories/interfaces/guestRepository';
 import { FunctionRepository } from '@/repositories/interfaces/functionRepository';
+import { ExpenseRepository } from '@/repositories/interfaces/expenseRepository';
 import { RepositoryInfrastructureError } from '@/repositories/errors';
 import { getEventMembershipId, getOrganizationMembershipId } from '@/repositories/membershipIds';
 import { Organization } from '@/types/organization';
@@ -14,6 +15,7 @@ import { Invitation, InvitationStatus } from '@/types/invitation';
 import { User } from '@/types/user';
 import { Guest, GuestSide, GuestStatus } from '@/types/guest';
 import { EventFunction, EventFunctionStatus } from '@/types/eventFunction';
+import { Expense, ExpenseCategory, PaymentStatus } from '@/types/expense';
 import {
   EventMember,
   EventRole,
@@ -117,6 +119,18 @@ export const buildEventFunction = (
 ): EventFunction => ({
   name: 'Mehndi',
   status: EventFunctionStatus.Planned,
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildExpense = (overrides: Partial<Expense> & { id: string; eventId: string }): Expense => ({
+  title: 'Venue Booking',
+  category: ExpenseCategory.Venue,
+  amount: 200000,
+  paymentStatus: PaymentStatus.Unpaid,
+  paidAmount: 0,
   createdBy: 'owner1',
   createdAt: now,
   updatedAt: now,
@@ -295,6 +309,27 @@ export class FakeFunctionRepository implements FunctionRepository {
       throw new RepositoryInfrastructureError('Failed to list functions.');
     }
     return this.functionsList.filter((f) => f.eventId === eventId);
+  }
+
+  create = unsupported;
+  update = unsupported;
+  delete = unsupported;
+}
+
+export class FakeExpenseRepository implements ExpenseRepository {
+  failing = false;
+
+  constructor(private readonly expenses: readonly Expense[] = []) {}
+
+  async getById(expenseId: string): Promise<Expense | null> {
+    return this.expenses.find((e) => e.id === expenseId) ?? null;
+  }
+
+  async listByEvent(eventId: string): Promise<Expense[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list expenses.');
+    }
+    return this.expenses.filter((e) => e.eventId === eventId);
   }
 
   create = unsupported;

@@ -3,7 +3,13 @@ import { firestore } from '@/services/firebase/firestore';
 import { Event, EventType, EventStatus } from '@/types/event';
 import { EventRepository } from '@/repositories/interfaces/eventRepository';
 import { RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
-import { getNullableString, getOptionalString, getRequiredString, getValidatedEnum } from '@/services/firebase/repositories/firestoreMapping';
+import {
+  getNullableString,
+  getOptionalNumber,
+  getOptionalString,
+  getRequiredString,
+  getValidatedEnum
+} from '@/services/firebase/repositories/firestoreMapping';
 
 const eventsCollection = 'events';
 
@@ -20,6 +26,7 @@ const mapEventToFirestore = (event: Event): Record<string, unknown> => ({
   timezone: event.timezone,
   venueName: event.venueName,
   venueAddress: event.venueAddress,
+  budgetAmount: event.budgetAmount,
   organizationId: event.organizationId,
   createdBy: event.createdBy,
   status: event.status,
@@ -42,6 +49,7 @@ const mapFirestoreToEvent = (eventId: string, data: Record<string, unknown>): Ev
     timezone: getOptionalString(data.timezone),
     venueName: getOptionalString(data.venueName),
     venueAddress: getOptionalString(data.venueAddress),
+    budgetAmount: getOptionalNumber(data.budgetAmount),
     organizationId: getNullableString(data.organizationId),
     createdBy: getRequiredString(data.createdBy, 'createdBy'),
     status: getValidatedEnum(data.status, 'status', validEventStatuses),

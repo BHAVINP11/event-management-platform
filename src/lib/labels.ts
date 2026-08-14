@@ -3,6 +3,7 @@ import { EventMemberSide, EventRole, MembershipStatus, OrganizationRole } from '
 import { InvitationStatus } from '@/types/invitation';
 import { GuestSide, GuestStatus } from '@/types/guest';
 import { EventFunctionStatus } from '@/types/eventFunction';
+import { ExpenseCategory, PaymentStatus } from '@/types/expense';
 
 /** Human-readable labels for the domain enums surfaced in the UI. */
 
@@ -76,6 +77,26 @@ const eventFunctionStatusLabels: Record<EventFunctionStatus, string> = {
   [EventFunctionStatus.Cancelled]: 'Cancelled'
 };
 
+const expenseCategoryLabels: Record<ExpenseCategory, string> = {
+  [ExpenseCategory.Venue]: 'Venue',
+  [ExpenseCategory.Catering]: 'Catering',
+  [ExpenseCategory.Decoration]: 'Decoration',
+  [ExpenseCategory.Photography]: 'Photography',
+  [ExpenseCategory.Entertainment]: 'Entertainment',
+  [ExpenseCategory.Transportation]: 'Transportation',
+  [ExpenseCategory.Accommodation]: 'Accommodation',
+  [ExpenseCategory.Jewellery]: 'Jewellery',
+  [ExpenseCategory.Clothing]: 'Clothing',
+  [ExpenseCategory.Invitation]: 'Invitation',
+  [ExpenseCategory.Other]: 'Other'
+};
+
+const paymentStatusLabels: Record<PaymentStatus, string> = {
+  [PaymentStatus.Unpaid]: 'Unpaid',
+  [PaymentStatus.PartiallyPaid]: 'Partially Paid',
+  [PaymentStatus.Paid]: 'Paid'
+};
+
 export const eventTypeLabel = (type: EventType): string => eventTypeLabels[type];
 export const eventStatusLabel = (status: EventStatus): string => eventStatusLabels[status];
 export const eventRoleLabel = (role: EventRole): string => eventRoleLabels[role];
@@ -87,3 +108,5 @@ export const membershipStatusLabel = (status: MembershipStatus): string => membe
 export const guestSideLabel = (side: GuestSide): string => guestSideLabels[side];
 export const guestStatusLabel = (status: GuestStatus): string => guestStatusLabels[status];
 export const eventFunctionStatusLabel = (status: EventFunctionStatus): string => eventFunctionStatusLabels[status];
+export const expenseCategoryLabel = (category: ExpenseCategory): string => expenseCategoryLabels[category];
+export const paymentStatusLabel = (status: PaymentStatus): string => paymentStatusLabels[status];

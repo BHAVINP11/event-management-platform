@@ -70,3 +70,8 @@ export declare function validateVenueName(venueName: string | undefined | unknow
  * Validate optional venue address.
  */
 export declare function validateVenueAddress(venueAddress: string | undefined | unknown): void;
+/**
+ * Validate an event's budget amount. Zero is allowed (an event with no
+ * budget set yet); negative amounts are not.
+ */
+export declare function validateBudgetAmount(budgetAmount: number | unknown): number;

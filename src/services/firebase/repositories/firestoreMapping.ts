@@ -70,3 +70,17 @@ export const getStringOrNull = (value: unknown): string | null | undefined => {
   }
   return undefined;
 };
+
+export const getOptionalNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  return undefined;
+};
+
+export const getRequiredNumber = (value: unknown, fieldName: string): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  throw new RepositoryDataError(`Missing or invalid '${fieldName}'.`);
+};

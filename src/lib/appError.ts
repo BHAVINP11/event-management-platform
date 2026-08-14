@@ -90,3 +90,19 @@ export class FunctionError extends AppError {
     this.code = code;
   }
 }
+
+/**
+ * Raised when loading or writing an expense, or reading/setting an event's
+ * budget, fails — whether from invalid input, denied event access/role, a
+ * missing expense, or an infrastructure failure. `code` carries the Cloud
+ * Function's error code where one applies.
+ */
+export class ExpenseError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'ExpenseError';
+    this.code = code;
+  }
+}

@@ -20,6 +20,7 @@ exports.validateEndDate = validateEndDate;
 exports.validateTimezone = validateTimezone;
 exports.validateVenueName = validateVenueName;
 exports.validateVenueAddress = validateVenueAddress;
+exports.validateBudgetAmount = validateBudgetAmount;
 const ORGANIZATION_NAME_MIN = 1;
 const ORGANIZATION_NAME_MAX = 200;
 const ORGANIZATION_SLUG_MIN = 1;
@@ -236,4 +237,17 @@ function validateVenueAddress(venueAddress) {
     if (venueAddress.length > VENUE_ADDRESS_MAX) {
         throw new ValidationError('invalid_venue_address', `Venue address must be at most ${VENUE_ADDRESS_MAX} characters.`);
     }
+}
+/**
+ * Validate an event's budget amount. Zero is allowed (an event with no
+ * budget set yet); negative amounts are not.
+ */
+function validateBudgetAmount(budgetAmount) {
+    if (typeof budgetAmount !== 'number' || !Number.isFinite(budgetAmount)) {
+        throw new ValidationError('invalid_budget_amount', 'Budget amount must be a number.');
+    }
+    if (budgetAmount < 0) {
+        throw new ValidationError('invalid_budget_amount', 'Budget amount cannot be negative.');
+    }
+    return budgetAmount;
 }

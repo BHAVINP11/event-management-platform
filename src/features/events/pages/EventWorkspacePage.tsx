@@ -9,11 +9,11 @@ import { formatDateRange } from '@/lib/date';
 import { eventRoleLabel, eventStatusLabel, eventTypeLabel } from '@/lib/labels';
 
 /**
- * Future workspace sections. Only Overview, People, Guests, and Functions
- * have real pages so far — the rest are navigation placeholders so the
- * eventual layout is visible without building their data models yet.
+ * Future workspace sections. Only Overview, People, Guests, Functions, and
+ * Expenses have real pages so far — the rest are navigation placeholders
+ * so the eventual layout is visible without building their data models yet.
  */
-const UPCOMING_WORKSPACE_SECTIONS = ['Expenses', 'Vendors', 'Tasks'];
+const UPCOMING_WORKSPACE_SECTIONS = ['Vendors', 'Tasks'];
 
 function EventWorkspaceNav({ eventId }: { eventId: string }): JSX.Element {
   return (
@@ -27,6 +27,9 @@ function EventWorkspaceNav({ eventId }: { eventId: string }): JSX.Element {
       </li>
       <li className="event-nav-item">
         <Link to={`/events/${eventId}/functions`}>Functions</Link>
+      </li>
+      <li className="event-nav-item">
+        <Link to={`/events/${eventId}/expenses`}>Expenses</Link>
       </li>
       {UPCOMING_WORKSPACE_SECTIONS.map((section) => (
         <li key={section} className="event-nav-item disabled">

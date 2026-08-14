@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onDeleteFunction = exports.onUpdateFunction = exports.onCreateFunction = exports.onDeleteGuest = exports.onUpdateGuest = exports.onCreateGuest = exports.onGetInvitationPreview = exports.onAcceptInvitation = exports.onCreateInvitation = exports.onCreateOrganizationEvent = exports.onCreateIndividualEvent = exports.onCreateOrganization = void 0;
+exports.onUpdateEventBudget = exports.onDeleteExpense = exports.onUpdateExpense = exports.onCreateExpense = exports.onDeleteFunction = exports.onUpdateFunction = exports.onCreateFunction = exports.onDeleteGuest = exports.onUpdateGuest = exports.onCreateGuest = exports.onGetInvitationPreview = exports.onAcceptInvitation = exports.onCreateInvitation = exports.onCreateOrganizationEvent = exports.onCreateIndividualEvent = exports.onCreateOrganization = void 0;
 const admin = __importStar(require("firebase-admin"));
 const functions = __importStar(require("firebase-functions"));
 const createOrganization_1 = require("./onboarding/createOrganization");
@@ -48,6 +48,10 @@ const deleteGuest_1 = require("./guests/deleteGuest");
 const createFunction_1 = require("./ceremonies/createFunction");
 const updateFunction_1 = require("./ceremonies/updateFunction");
 const deleteFunction_1 = require("./ceremonies/deleteFunction");
+const createExpense_1 = require("./expenses/createExpense");
+const updateExpense_1 = require("./expenses/updateExpense");
+const deleteExpense_1 = require("./expenses/deleteExpense");
+const updateEventBudget_1 = require("./events/updateEventBudget");
 const validation_1 = require("./validation");
 const errorMapping_1 = require("./errorMapping");
 // Initialize Firebase Admin SDK
@@ -525,6 +529,150 @@ exports.onUpdateFunction = functions.https.onCall(async (data, context) => {
 exports.onDeleteFunction = functions.https.onCall(async (data, context) => {
     try {
         return await (0, deleteFunction_1.handleDeleteFunction)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: createExpense
+ *
+ * Adds an expense to an event's budget tracker. The caller must have an
+ * active EventMember with role owner or planner. `id`, `eventId` (from the
+ * request), `createdBy`, and the timestamps are never trusted from the
+ * client beyond the requested `eventId`, which is independently verified.
+ * `paidAmount` is always server-derived from `paymentStatus`/`amount`
+ * (see `functions/src/expenses/shared.ts`), except for `partially_paid`,
+ * where the client's figure is validated against `amount`.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   title: string,
+ *   category: string,
+ *   amount: number,
+ *   paymentStatus?: string ('unpaid' | 'partially_paid' | 'paid', default 'unpaid'),
+ *   paidAmount?: number (required, and validated 0 <= paidAmount <= amount, only when paymentStatus is 'partially_paid'),
+ *   paymentDate?: string,
+ *   notes?: string
+ * }
+ *
+ * Output:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage expenses
+ * - internal_error: Server error
+ */
+exports.onCreateExpense = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, createExpense_1.handleCreateExpense)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: updateExpense
+ *
+ * Edits an expense's fields. Authority is verified against the expense's
+ * *stored* eventId, never one the client could supply, so a client cannot
+ * retarget an edit at a different event's expense. `id`, `eventId`,
+ * `createdBy`, and `createdAt` are carried over from the existing
+ * document.
+ *
+ * Input: same shape as createExpense, plus `expenseId: string` in place of `eventId`.
+ *
+ * Output:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - expense_not_found: Expense does not exist
+ * - event_access_denied: Caller has no active membership in the expense's event
+ * - event_role_not_allowed: Caller's role cannot manage expenses
+ * - internal_error: Server error
+ */
+exports.onUpdateExpense = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, updateExpense_1.handleUpdateExpense)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: deleteExpense
+ *
+ * Removes an expense. Authority is verified against the expense's
+ * *stored* eventId, exactly like updateExpense.
+ *
+ * Input:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Output:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_expense_id: Input validation error
+ * - expense_not_found: Expense does not exist
+ * - event_access_denied: Caller has no active membership in the expense's event
+ * - event_role_not_allowed: Caller's role cannot manage expenses
+ * - internal_error: Server error
+ */
+exports.onDeleteExpense = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, deleteExpense_1.handleDeleteExpense)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: updateEventBudget
+ *
+ * Sets an event's budget amount. The caller must have an active
+ * EventMember with role owner or planner. Patches only `budgetAmount` (and
+ * `updatedAt`) on the existing event document — the budget is a field on
+ * the Event itself, not a separate collection or document.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   budgetAmount: number
+ * }
+ *
+ * Output:
+ * {
+ *   eventId: string,
+ *   budgetAmount: number
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_budget_amount: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage the budget
+ * - internal_error: Server error
+ */
+exports.onUpdateEventBudget = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, updateEventBudget_1.handleUpdateEventBudget)(db, data, context);
     }
     catch (error) {
         throw toHttpsError(error);

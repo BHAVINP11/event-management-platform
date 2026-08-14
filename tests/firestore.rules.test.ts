@@ -75,6 +75,19 @@ const eventFunction = (eventId: string, name = 'Mehndi') => ({
   updatedAt: now
 });
 
+const expense = (eventId: string, title = 'Venue Booking') => ({
+  id: 'expense1',
+  eventId,
+  title,
+  category: 'venue',
+  amount: 200000,
+  paymentStatus: 'unpaid',
+  paidAmount: 0,
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now
+});
+
 const invitation = (eventId: string, invitedEmail: string, status = 'pending') => ({
   id: 'invitation1',
   eventId,
@@ -696,6 +709,116 @@ describe('Firestore Security Rules', () => {
 
       await expect(
         testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').delete()
+      ).rejects.toThrow();
+    });
+  });
+
+  // Step 14: expenses have no side-scoping — any active event member may
+  // view every expense for that event, regardless of role. The event's
+  // budgetAmount lives on the event document itself, so it is already
+  // covered by the existing Events describe block above.
+  describe('Expenses', () => {
+    test('an active event member can read an expense for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('expenses').doc('expense1').get()).resolves.toBeDefined();
+    });
+
+    test('an active event member can list every expense for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1', 'Venue Booking'));
+        await adminDb.firestore().collection('expenses').doc('expense2').set(expense('event1', 'Catering'));
+        await adminDb.firestore().collection('expenses').doc('expense3').set(expense('event2', 'Someone Else\'s Expense'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('expenses').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(2);
+    });
+
+    test.each(['owner', 'planner', 'couple', 'family', 'staff', 'viewer'])(
+      'a %s member can read expenses (no side-scoping for this domain)',
+      async (role) => {
+        await seed(async (adminDb) => {
+          await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', role));
+          await adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1'));
+        });
+
+        await expect(testEnv.authenticatedContext('user1').firestore().collection('expenses').doc('expense1').get()).resolves.toBeDefined();
+      }
+    );
+
+    test('an unauthenticated user cannot read an expense', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1')));
+
+      await expect(testEnv.unauthenticatedContext().firestore().collection('expenses').doc('expense1').get()).rejects.toThrow();
+    });
+
+    test('an inactive event member cannot read that event\'s expenses', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'inactive'));
+        await adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('expenses').doc('expense1').get()).rejects.toThrow();
+    });
+
+    test('a member of a different event cannot read this event\'s expense (event isolation)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event2', 'user1')).set(eventMember('event2', 'user1', 'active'));
+        await adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('expenses').doc('expense1').get()).rejects.toThrow();
+    });
+
+    test('a non-member cannot list expenses for an event they do not belong to', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1')));
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('expenses').where('eventId', '==', 'event1').get()).rejects.toThrow();
+    });
+
+    test('client cannot create an expense directly', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active')));
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('expenses').doc('expense1').set(expense('event1'))
+      ).rejects.toThrow();
+    });
+
+    test('client cannot update an expense directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('expenses').doc('expense1').update({ paymentStatus: 'paid' })
+      ).rejects.toThrow();
+    });
+
+    test('client cannot delete an expense directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('expenses').doc('expense1').set(expense('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('expenses').doc('expense1').delete()
+      ).rejects.toThrow();
+    });
+
+    test('client cannot set the event budget directly (budgetAmount lives on the event document)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('events').doc('event1').set(event());
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('events').doc('event1').update({ budgetAmount: 999999 })
       ).rejects.toThrow();
     });
   });

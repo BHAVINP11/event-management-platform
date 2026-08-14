@@ -544,4 +544,66 @@ export const resourceStyles = `
     gap: 0.5rem;
     flex-shrink: 0;
   }
+
+  /* Expenses page: budget summary, edit-budget action */
+
+  .budget-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .budget-stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .budget-stat-value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .budget-stat-value.negative {
+    color: #c33;
+  }
+
+  .budget-stat-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #94a3b8;
+  }
+
+  .budget-edit-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .budget-edit-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .budget-edit-form label {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.9rem;
+  }
+
+  .budget-edit-form input {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    width: 200px;
+  }
 `;

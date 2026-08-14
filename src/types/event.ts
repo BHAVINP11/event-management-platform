@@ -23,6 +23,8 @@ export interface Event {
   timezone?: string;
   venueName?: string;
   venueAddress?: string;
+  /** The event's budget, set via updateEventBudget. Absent until an owner/planner sets one. */
+  budgetAmount?: number;
   organizationId?: string | null;
   createdBy: string;
   status: EventStatus;

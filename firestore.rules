@@ -157,5 +157,18 @@ service cloud.firestore {
 
       allow write: if false;
     }
+
+    // Expense rules
+    // expenses/{expenseId} — any active member of the event may view every
+    // expense for that event; there is no side-scoping for this domain
+    // (matching functions/ceremonies). Only the trusted createExpense/
+    // updateExpense/deleteExpense Cloud Functions may write, after
+    // independently re-verifying the caller has owner/planner authority. A
+    // flat collection carrying an eventId field, like guests/functions.
+    match /expenses/{expenseId} {
+      allow read: if isActiveEventMember(resource.data.eventId);
+
+      allow write: if false;
+    }
   }
 }

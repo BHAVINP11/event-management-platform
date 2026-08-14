@@ -15,6 +15,10 @@ import { handleDeleteGuest } from './guests/deleteGuest';
 import { handleCreateFunction } from './ceremonies/createFunction';
 import { handleUpdateFunction } from './ceremonies/updateFunction';
 import { handleDeleteFunction } from './ceremonies/deleteFunction';
+import { handleCreateExpense } from './expenses/createExpense';
+import { handleUpdateExpense } from './expenses/updateExpense';
+import { handleDeleteExpense } from './expenses/deleteExpense';
+import { handleUpdateEventBudget } from './events/updateEventBudget';
 import { ValidationError } from './validation';
 import { mapErrorToCallableResponse } from './errorMapping';
 
@@ -497,6 +501,150 @@ export const onUpdateFunction = functions.https.onCall(async (data, context) => 
 export const onDeleteFunction = functions.https.onCall(async (data, context) => {
   try {
     return await handleDeleteFunction(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: createExpense
+ *
+ * Adds an expense to an event's budget tracker. The caller must have an
+ * active EventMember with role owner or planner. `id`, `eventId` (from the
+ * request), `createdBy`, and the timestamps are never trusted from the
+ * client beyond the requested `eventId`, which is independently verified.
+ * `paidAmount` is always server-derived from `paymentStatus`/`amount`
+ * (see `functions/src/expenses/shared.ts`), except for `partially_paid`,
+ * where the client's figure is validated against `amount`.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   title: string,
+ *   category: string,
+ *   amount: number,
+ *   paymentStatus?: string ('unpaid' | 'partially_paid' | 'paid', default 'unpaid'),
+ *   paidAmount?: number (required, and validated 0 <= paidAmount <= amount, only when paymentStatus is 'partially_paid'),
+ *   paymentDate?: string,
+ *   notes?: string
+ * }
+ *
+ * Output:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage expenses
+ * - internal_error: Server error
+ */
+export const onCreateExpense = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleCreateExpense(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateExpense
+ *
+ * Edits an expense's fields. Authority is verified against the expense's
+ * *stored* eventId, never one the client could supply, so a client cannot
+ * retarget an edit at a different event's expense. `id`, `eventId`,
+ * `createdBy`, and `createdAt` are carried over from the existing
+ * document.
+ *
+ * Input: same shape as createExpense, plus `expenseId: string` in place of `eventId`.
+ *
+ * Output:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - expense_not_found: Expense does not exist
+ * - event_access_denied: Caller has no active membership in the expense's event
+ * - event_role_not_allowed: Caller's role cannot manage expenses
+ * - internal_error: Server error
+ */
+export const onUpdateExpense = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateExpense(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: deleteExpense
+ *
+ * Removes an expense. Authority is verified against the expense's
+ * *stored* eventId, exactly like updateExpense.
+ *
+ * Input:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Output:
+ * {
+ *   expenseId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_expense_id: Input validation error
+ * - expense_not_found: Expense does not exist
+ * - event_access_denied: Caller has no active membership in the expense's event
+ * - event_role_not_allowed: Caller's role cannot manage expenses
+ * - internal_error: Server error
+ */
+export const onDeleteExpense = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleDeleteExpense(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateEventBudget
+ *
+ * Sets an event's budget amount. The caller must have an active
+ * EventMember with role owner or planner. Patches only `budgetAmount` (and
+ * `updatedAt`) on the existing event document — the budget is a field on
+ * the Event itself, not a separate collection or document.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   budgetAmount: number
+ * }
+ *
+ * Output:
+ * {
+ *   eventId: string,
+ *   budgetAmount: number
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_budget_amount: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage the budget
+ * - internal_error: Server error
+ */
+export const onUpdateEventBudget = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateEventBudget(db, data, context);
   } catch (error) {
     throw toHttpsError(error);
   }

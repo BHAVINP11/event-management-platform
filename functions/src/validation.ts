@@ -294,3 +294,19 @@ export function validateVenueAddress(venueAddress: string | undefined | unknown)
     );
   }
 }
+
+/**
+ * Validate an event's budget amount. Zero is allowed (an event with no
+ * budget set yet); negative amounts are not.
+ */
+export function validateBudgetAmount(budgetAmount: number | unknown): number {
+  if (typeof budgetAmount !== 'number' || !Number.isFinite(budgetAmount)) {
+    throw new ValidationError('invalid_budget_amount', 'Budget amount must be a number.');
+  }
+
+  if (budgetAmount < 0) {
+    throw new ValidationError('invalid_budget_amount', 'Budget amount cannot be negative.');
+  }
+
+  return budgetAmount;
+}

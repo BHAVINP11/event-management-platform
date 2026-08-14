@@ -53,7 +53,8 @@ const KNOWN_APP_CODES: Record<string, FirebaseCallableErrorCode> = {
   invitation_email_mismatch: 'permission-denied',
   guest_not_found: 'not-found',
   guest_side_not_allowed: 'permission-denied',
-  function_not_found: 'not-found'
+  function_not_found: 'not-found',
+  expense_not_found: 'not-found'
 };
 
 function firebaseCodeFor(appCode: string): FirebaseCallableErrorCode {
