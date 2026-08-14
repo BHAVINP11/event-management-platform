@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onDeleteGuest = exports.onUpdateGuest = exports.onCreateGuest = exports.onGetInvitationPreview = exports.onAcceptInvitation = exports.onCreateInvitation = exports.onCreateOrganizationEvent = exports.onCreateIndividualEvent = exports.onCreateOrganization = void 0;
+exports.onDeleteFunction = exports.onUpdateFunction = exports.onCreateFunction = exports.onDeleteGuest = exports.onUpdateGuest = exports.onCreateGuest = exports.onGetInvitationPreview = exports.onAcceptInvitation = exports.onCreateInvitation = exports.onCreateOrganizationEvent = exports.onCreateIndividualEvent = exports.onCreateOrganization = void 0;
 const admin = __importStar(require("firebase-admin"));
 const functions = __importStar(require("firebase-functions"));
 const createOrganization_1 = require("./onboarding/createOrganization");
@@ -45,6 +45,9 @@ const getInvitationPreview_1 = require("./invitations/getInvitationPreview");
 const createGuest_1 = require("./guests/createGuest");
 const updateGuest_1 = require("./guests/updateGuest");
 const deleteGuest_1 = require("./guests/deleteGuest");
+const createFunction_1 = require("./ceremonies/createFunction");
+const updateFunction_1 = require("./ceremonies/updateFunction");
+const deleteFunction_1 = require("./ceremonies/deleteFunction");
 const validation_1 = require("./validation");
 const errorMapping_1 = require("./errorMapping");
 // Initialize Firebase Admin SDK
@@ -404,6 +407,124 @@ exports.onUpdateGuest = functions.https.onCall(async (data, context) => {
 exports.onDeleteGuest = functions.https.onCall(async (data, context) => {
     try {
         return await (0, deleteGuest_1.handleDeleteGuest)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: createFunction
+ *
+ * Adds a function/ceremony (e.g. Mehndi, Haldi, Sangeet, Wedding,
+ * Reception) to an event. The caller must have an active EventMember with
+ * role owner or planner. `id`, `eventId` (from the request), `createdBy`,
+ * and the timestamps are never trusted from the client beyond the
+ * requested `eventId`, which is independently verified.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   name: string,
+ *   description?: string,
+ *   date?: string,
+ *   startTime?: string ("HH:MM"),
+ *   endTime?: string ("HH:MM"),
+ *   venue?: string,
+ *   notes?: string,
+ *   status?: string ('planned' | 'confirmed' | 'completed' | 'cancelled', default 'planned')
+ * }
+ *
+ * Output:
+ * {
+ *   functionId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_time_range)
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage functions
+ * - internal_error: Server error
+ */
+exports.onCreateFunction = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, createFunction_1.handleCreateFunction)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: updateFunction
+ *
+ * Edits a function/ceremony's fields. Authority is verified against the
+ * function's *stored* eventId, never one the client could supply, so a
+ * client cannot retarget an edit at a different event's function. `id`,
+ * `eventId`, `createdBy`, and `createdAt` are carried over from the
+ * existing document.
+ *
+ * Input:
+ * {
+ *   functionId: string,
+ *   name: string,
+ *   description?: string,
+ *   date?: string,
+ *   startTime?: string,
+ *   endTime?: string,
+ *   venue?: string,
+ *   notes?: string,
+ *   status?: string
+ * }
+ *
+ * Output:
+ * {
+ *   functionId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_time_range)
+ * - function_not_found: Function does not exist
+ * - event_access_denied: Caller has no active membership in the function's event
+ * - event_role_not_allowed: Caller's role cannot manage functions
+ * - internal_error: Server error
+ */
+exports.onUpdateFunction = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, updateFunction_1.handleUpdateFunction)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: deleteFunction
+ *
+ * Removes a function/ceremony. Authority is verified against the
+ * function's *stored* eventId, exactly like updateFunction.
+ *
+ * Input:
+ * {
+ *   functionId: string
+ * }
+ *
+ * Output:
+ * {
+ *   functionId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_function_id: Input validation error
+ * - function_not_found: Function does not exist
+ * - event_access_denied: Caller has no active membership in the function's event
+ * - event_role_not_allowed: Caller's role cannot manage functions
+ * - internal_error: Server error
+ */
+exports.onDeleteFunction = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, deleteFunction_1.handleDeleteFunction)(db, data, context);
     }
     catch (error) {
         throw toHttpsError(error);

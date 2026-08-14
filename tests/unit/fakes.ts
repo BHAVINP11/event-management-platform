@@ -5,6 +5,7 @@ import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepo
 import { InvitationRepository } from '@/repositories/interfaces/invitationRepository';
 import { UserRepository } from '@/repositories/interfaces/userRepository';
 import { GuestRepository } from '@/repositories/interfaces/guestRepository';
+import { FunctionRepository } from '@/repositories/interfaces/functionRepository';
 import { RepositoryInfrastructureError } from '@/repositories/errors';
 import { getEventMembershipId, getOrganizationMembershipId } from '@/repositories/membershipIds';
 import { Organization } from '@/types/organization';
@@ -12,6 +13,7 @@ import { Event, EventStatus, EventType } from '@/types/event';
 import { Invitation, InvitationStatus } from '@/types/invitation';
 import { User } from '@/types/user';
 import { Guest, GuestSide, GuestStatus } from '@/types/guest';
+import { EventFunction, EventFunctionStatus } from '@/types/eventFunction';
 import {
   EventMember,
   EventRole,
@@ -104,6 +106,17 @@ export const buildGuest = (overrides: Partial<Guest> & { id: string; eventId: st
   name: 'Rajesh Patel',
   side: GuestSide.Bride,
   status: GuestStatus.Pending,
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildEventFunction = (
+  overrides: Partial<EventFunction> & { id: string; eventId: string }
+): EventFunction => ({
+  name: 'Mehndi',
+  status: EventFunctionStatus.Planned,
   createdBy: 'owner1',
   createdAt: now,
   updatedAt: now,
@@ -261,6 +274,27 @@ export class FakeGuestRepository implements GuestRepository {
 
   async listByEventAndSide(eventId: string, side: GuestSide): Promise<Guest[]> {
     return this.guests.filter((g) => g.eventId === eventId && g.side === side);
+  }
+
+  create = unsupported;
+  update = unsupported;
+  delete = unsupported;
+}
+
+export class FakeFunctionRepository implements FunctionRepository {
+  failing = false;
+
+  constructor(private readonly functionsList: readonly EventFunction[] = []) {}
+
+  async getById(functionId: string): Promise<EventFunction | null> {
+    return this.functionsList.find((f) => f.id === functionId) ?? null;
+  }
+
+  async listByEvent(eventId: string): Promise<EventFunction[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list functions.');
+    }
+    return this.functionsList.filter((f) => f.eventId === eventId);
   }
 
   create = unsupported;

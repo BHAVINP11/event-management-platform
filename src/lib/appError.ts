@@ -74,3 +74,19 @@ export class GuestError extends AppError {
     this.code = code;
   }
 }
+
+/**
+ * Raised when loading or writing a function/ceremony fails, whether from
+ * invalid input, denied event access/role, a missing function, or an
+ * infrastructure failure. `code` carries the Cloud Function's error code
+ * where one applies.
+ */
+export class FunctionError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'FunctionError';
+    this.code = code;
+  }
+}

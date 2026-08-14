@@ -65,6 +65,16 @@ const guest = (eventId: string, name = 'Rajesh Patel', side = 'bride') => ({
   updatedAt: now
 });
 
+const eventFunction = (eventId: string, name = 'Mehndi') => ({
+  id: 'function1',
+  eventId,
+  name,
+  status: 'planned',
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now
+});
+
 const invitation = (eventId: string, invitedEmail: string, status = 'pending') => ({
   id: 'invitation1',
   eventId,
@@ -590,6 +600,103 @@ describe('Firestore Security Rules', () => {
 
       const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('guests').where('eventId', '==', 'event1').get();
       expect(snapshot.docs).toHaveLength(2);
+    });
+  });
+
+  // Step 13: functions/ceremonies have no side-scoping — any active event
+  // member may view every function for that event, regardless of role.
+  describe('Functions', () => {
+    test('an active event member can read a function for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').get()).resolves.toBeDefined();
+    });
+
+    test('an active event member can list every function for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1', 'Mehndi'));
+        await adminDb.firestore().collection('functions').doc('function2').set(eventFunction('event1', 'Sangeet'));
+        await adminDb.firestore().collection('functions').doc('function3').set(eventFunction('event2', 'Someone Else\'s Wedding'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('functions').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(2);
+    });
+
+    test.each(['owner', 'planner', 'couple', 'family', 'staff', 'viewer'])(
+      'a %s member can read functions (no side-scoping for this domain)',
+      async (role) => {
+        await seed(async (adminDb) => {
+          await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', role));
+          await adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1'));
+        });
+
+        await expect(testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').get()).resolves.toBeDefined();
+      }
+    );
+
+    test('an unauthenticated user cannot read a function', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1')));
+
+      await expect(testEnv.unauthenticatedContext().firestore().collection('functions').doc('function1').get()).rejects.toThrow();
+    });
+
+    test('an inactive event member cannot read that event\'s functions', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'inactive'));
+        await adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').get()).rejects.toThrow();
+    });
+
+    test('a member of a different event cannot read this event\'s function (event isolation)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event2', 'user1')).set(eventMember('event2', 'user1', 'active'));
+        await adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').get()).rejects.toThrow();
+    });
+
+    test('a non-member cannot list functions for an event they do not belong to', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1')));
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('functions').where('eventId', '==', 'event1').get()).rejects.toThrow();
+    });
+
+    test('client cannot create a function directly', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active')));
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').set(eventFunction('event1'))
+      ).rejects.toThrow();
+    });
+
+    test('client cannot update a function directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').update({ status: 'confirmed' })
+      ).rejects.toThrow();
+    });
+
+    test('client cannot delete a function directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('functions').doc('function1').set(eventFunction('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('functions').doc('function1').delete()
+      ).rejects.toThrow();
     });
   });
 });
