@@ -8,36 +8,6 @@ import { resourceStyles } from '@/components/ui/resourceStyles';
 import { formatDateRange } from '@/lib/date';
 import { eventRoleLabel, eventStatusLabel, eventTypeLabel } from '@/lib/labels';
 
-/**
- * Every workspace section now has a real page: Overview, People, Guests,
- * Functions, Expenses, Vendors, and Tasks.
- */
-function EventWorkspaceNav({ eventId }: { eventId: string }): JSX.Element {
-  return (
-    <ul className="event-nav">
-      <li className="event-nav-item active">Overview</li>
-      <li className="event-nav-item">
-        <Link to={`/events/${eventId}/people`}>People</Link>
-      </li>
-      <li className="event-nav-item">
-        <Link to={`/events/${eventId}/guests`}>Guests</Link>
-      </li>
-      <li className="event-nav-item">
-        <Link to={`/events/${eventId}/functions`}>Functions</Link>
-      </li>
-      <li className="event-nav-item">
-        <Link to={`/events/${eventId}/expenses`}>Expenses</Link>
-      </li>
-      <li className="event-nav-item">
-        <Link to={`/events/${eventId}/vendors`}>Vendors</Link>
-      </li>
-      <li className="event-nav-item">
-        <Link to={`/events/${eventId}/tasks`}>Tasks</Link>
-      </li>
-    </ul>
-  );
-}
-
 function EventOverview({ event }: { event: EventDetailView }): JSX.Element {
   const dateRange = formatDateRange(event.startDate, event.endDate);
   const venue = [event.venueName, event.venueAddress].filter(Boolean).join(' — ');
@@ -87,9 +57,9 @@ function EventOverview({ event }: { event: EventDetailView }): JSX.Element {
 }
 
 /**
- * The event workspace shell: header, section navigation, and the Overview
- * page. Every other section is a labeled placeholder — no data model or
- * feature behind it yet.
+ * The event workspace header and the Overview page's own content.
+ * Navigation between workspace sections is handled by the app shell's
+ * sidebar, not by this page.
  */
 function EventWorkspace({ event }: { event: EventDetailView }): JSX.Element {
   const dateRange = formatDateRange(event.startDate, event.endDate);
@@ -102,8 +72,6 @@ function EventWorkspace({ event }: { event: EventDetailView }): JSX.Element {
           {dateRange ?? 'Not scheduled yet'} · {eventStatusLabel(event.status)}
         </p>
       </div>
-
-      <EventWorkspaceNav eventId={event.id} />
 
       <EventOverview event={event} />
     </>

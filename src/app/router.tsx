@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { PageShell } from '@/components/layout/PageShell';
+import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/public/HomePage';
 import { LoginPage } from '@/pages/public/LoginPage';
 import { SignupPage } from '@/pages/public/SignupPage';
@@ -30,10 +31,20 @@ export function AppRouter(): JSX.Element {
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingTypePage /></ProtectedRoute>} />
         <Route path="/onboarding/planner" element={<ProtectedRoute><PlannerOnboardingPage /></ProtectedRoute>} />
         <Route path="/onboarding/event" element={<ProtectedRoute><IndividualEventOnboardingPage /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        {/* The dashboard is the single list of accessible events. */}
-        <Route path="/events" element={<Navigate to="/dashboard" replace />} />
         <Route path="/events/new" element={<ProtectedRoute><EventCreatePage /></ProtectedRoute>} />
+        {/* Not wrapped in ProtectedRoute: an unauthenticated visitor must be
+            sent through login/signup with a way back to this exact URL,
+            which the page itself handles (see InvitationAcceptPage). */}
+        <Route path="/invitations/:invitationId" element={<InvitationAcceptPage />} />
+      </Route>
+
+      {/* The authenticated app shell (header + sidebar + main): every
+          screen a signed-in user actually works in day to day. Kept
+          separate from the plain PageShell above, which only ever needs a
+          simple header (marketing/auth/onboarding pages, none of which
+          have a sidebar-worthy nested navigation yet). */}
+      <Route element={<AppShell />}>
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/events/:eventId" element={<ProtectedRoute><EventWorkspacePage /></ProtectedRoute>} />
         <Route path="/events/:eventId/people" element={<ProtectedRoute><EventPeoplePage /></ProtectedRoute>} />
         <Route path="/events/:eventId/guests" element={<ProtectedRoute><GuestsPage /></ProtectedRoute>} />
@@ -41,11 +52,10 @@ export function AppRouter(): JSX.Element {
         <Route path="/events/:eventId/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
         <Route path="/events/:eventId/vendors" element={<ProtectedRoute><VendorsPage /></ProtectedRoute>} />
         <Route path="/events/:eventId/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
-        {/* Not wrapped in ProtectedRoute: an unauthenticated visitor must be
-            sent through login/signup with a way back to this exact URL,
-            which the page itself handles (see InvitationAcceptPage). */}
-        <Route path="/invitations/:invitationId" element={<InvitationAcceptPage />} />
       </Route>
+
+      {/* The dashboard is the single list of accessible events. */}
+      <Route path="/events" element={<Navigate to="/dashboard" replace />} />
       <Route path="/404" element={<NotFoundPage />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
