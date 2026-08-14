@@ -4,12 +4,14 @@ import { EventRepository } from '@/repositories/interfaces/eventRepository';
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
 import { InvitationRepository } from '@/repositories/interfaces/invitationRepository';
 import { UserRepository } from '@/repositories/interfaces/userRepository';
+import { GuestRepository } from '@/repositories/interfaces/guestRepository';
 import { RepositoryInfrastructureError } from '@/repositories/errors';
 import { getEventMembershipId, getOrganizationMembershipId } from '@/repositories/membershipIds';
 import { Organization } from '@/types/organization';
 import { Event, EventStatus, EventType } from '@/types/event';
 import { Invitation, InvitationStatus } from '@/types/invitation';
 import { User } from '@/types/user';
+import { Guest, GuestSide, GuestStatus } from '@/types/guest';
 import {
   EventMember,
   EventRole,
@@ -93,6 +95,16 @@ export const buildUser = (overrides: Partial<User> & { id: string }): User => ({
   lastName: 'Patel',
   displayName: 'Bhavin Patel',
   email: 'bhavin@example.com',
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildGuest = (overrides: Partial<Guest> & { id: string; eventId: string }): Guest => ({
+  name: 'Rajesh Patel',
+  side: GuestSide.Bride,
+  status: GuestStatus.Pending,
+  createdBy: 'owner1',
   createdAt: now,
   updatedAt: now,
   ...overrides
@@ -229,4 +241,29 @@ export class FakeUserRepository implements UserRepository {
 
   create = unsupported;
   update = unsupported;
+}
+
+export class FakeGuestRepository implements GuestRepository {
+  failing = false;
+
+  constructor(private readonly guests: readonly Guest[] = []) {}
+
+  async getById(guestId: string): Promise<Guest | null> {
+    return this.guests.find((g) => g.id === guestId) ?? null;
+  }
+
+  async listByEvent(eventId: string): Promise<Guest[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list guests.');
+    }
+    return this.guests.filter((g) => g.eventId === eventId);
+  }
+
+  async listByEventAndSide(eventId: string, side: GuestSide): Promise<Guest[]> {
+    return this.guests.filter((g) => g.eventId === eventId && g.side === side);
+  }
+
+  create = unsupported;
+  update = unsupported;
+  delete = unsupported;
 }

@@ -1,6 +1,7 @@
 import { EventStatus, EventType } from '@/types/event';
 import { EventMemberSide, EventRole, MembershipStatus, OrganizationRole } from '@/types/membership';
 import { InvitationStatus } from '@/types/invitation';
+import { GuestSide, GuestStatus } from '@/types/guest';
 
 /** Human-readable labels for the domain enums surfaced in the UI. */
 
@@ -54,6 +55,19 @@ const membershipStatusLabels: Record<MembershipStatus, string> = {
   [MembershipStatus.Inactive]: 'Inactive'
 };
 
+const guestSideLabels: Record<GuestSide, string> = {
+  [GuestSide.Bride]: 'Bride',
+  [GuestSide.Groom]: 'Groom',
+  [GuestSide.Both]: 'Both'
+};
+
+const guestStatusLabels: Record<GuestStatus, string> = {
+  [GuestStatus.Pending]: 'Pending',
+  [GuestStatus.Invited]: 'Invited',
+  [GuestStatus.Confirmed]: 'Confirmed',
+  [GuestStatus.Declined]: 'Declined'
+};
+
 export const eventTypeLabel = (type: EventType): string => eventTypeLabels[type];
 export const eventStatusLabel = (status: EventStatus): string => eventStatusLabels[status];
 export const eventRoleLabel = (role: EventRole): string => eventRoleLabels[role];
@@ -62,3 +76,5 @@ export const organizationRoleLabel = (role: OrganizationRole): string =>
 export const eventMemberSideLabel = (side: EventMemberSide): string => eventMemberSideLabels[side];
 export const invitationStatusLabel = (status: InvitationStatus): string => invitationStatusLabels[status];
 export const membershipStatusLabel = (status: MembershipStatus): string => membershipStatusLabels[status];
+export const guestSideLabel = (side: GuestSide): string => guestSideLabels[side];
+export const guestStatusLabel = (status: GuestStatus): string => guestStatusLabels[status];

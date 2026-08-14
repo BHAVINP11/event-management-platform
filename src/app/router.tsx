@@ -7,6 +7,7 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { EventWorkspacePage } from '@/features/events/pages/EventWorkspacePage';
 import { EventCreatePage } from '@/features/events/pages/EventCreatePage';
 import { EventPeoplePage } from '@/features/events/pages/EventPeoplePage';
+import { GuestsPage } from '@/features/events/pages/GuestsPage';
 import { InvitationAcceptPage } from '@/features/events/pages/InvitationAcceptPage';
 import { NotFoundPage } from '@/pages/public/NotFoundPage';
 import { OnboardingTypePage } from '@/pages/onboarding/OnboardingTypePage';
@@ -31,6 +32,7 @@ export function AppRouter(): JSX.Element {
         <Route path="/events/new" element={<ProtectedRoute><EventCreatePage /></ProtectedRoute>} />
         <Route path="/events/:eventId" element={<ProtectedRoute><EventWorkspacePage /></ProtectedRoute>} />
         <Route path="/events/:eventId/people" element={<ProtectedRoute><EventPeoplePage /></ProtectedRoute>} />
+        <Route path="/events/:eventId/guests" element={<ProtectedRoute><GuestsPage /></ProtectedRoute>} />
         {/* Not wrapped in ProtectedRoute: an unauthenticated visitor must be
             sent through login/signup with a way back to this exact URL,
             which the page itself handles (see InvitationAcceptPage). */}

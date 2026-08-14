@@ -1,6 +1,6 @@
 import { ValidationError } from '../validation';
 import { CallableAuthContext } from '../shared/callableContext';
-import { getEventMembershipId } from '../shared/membershipIds';
+import { verifyEventManagementAuthority } from '../shared/eventAuthority';
 import { CreateInvitationFields, buildInvitationDocument, validateInvitationFields } from './shared';
 
 export interface CreateInvitationInput extends CreateInvitationFields {
@@ -14,13 +14,6 @@ export interface CreateInvitationOutput {
 interface AuthContext {
   uid: string;
 }
-
-/**
- * Event roles allowed to invite people to an event. Granular per-role
- * invitation permissions are a future step — for now, only the two roles
- * capable of creating the event's collaborator list may extend it.
- */
-const INVITER_ALLOWED_ROLES = ['owner', 'planner'];
 
 /** How long a new invitation remains acceptable. Not client-configurable. */
 const INVITATION_EXPIRY_DAYS = 14;
@@ -39,48 +32,6 @@ export function validateCreateInvitationInput(input: unknown): CreateInvitationI
   const fields = validateInvitationFields(obj);
 
   return { eventId: obj.eventId, ...fields };
-}
-
-/**
- * Verifies the caller may invite people to the given event.
- *
- * Loads the membership by its deterministic ID rather than trusting anything
- * the client asserted about its own access — mirrors
- * `verifyOrganizationEventCreationAccess` in
- * `functions/src/events/createOrganizationEvent.ts`.
- *
- * @throws ValidationError('event_not_found') if the event does not exist
- * @throws ValidationError('event_access_denied') if there is no active membership
- * @throws ValidationError('event_role_not_allowed') if the role cannot invite
- */
-export async function verifyInviterAuthority(
-  db: FirebaseFirestore.Firestore,
-  eventId: string,
-  userId: string
-): Promise<void> {
-  const eventSnapshot = await db.collection('events').doc(eventId).get();
-  if (!eventSnapshot.exists) {
-    throw new ValidationError('event_not_found', 'Event not found.');
-  }
-
-  const membershipId = getEventMembershipId(eventId, userId);
-  const membershipSnapshot = await db.collection('eventMembers').doc(membershipId).get();
-  const membership = membershipSnapshot.data() as
-    | { eventId?: string; status?: string; role?: string }
-    | undefined;
-
-  if (
-    !membershipSnapshot.exists ||
-    !membership ||
-    membership.eventId !== eventId ||
-    membership.status !== 'active'
-  ) {
-    throw new ValidationError('event_access_denied', 'You do not have access to this event.');
-  }
-
-  if (!membership.role || !INVITER_ALLOWED_ROLES.includes(membership.role)) {
-    throw new ValidationError('event_role_not_allowed', 'Your role does not allow inviting people to this event.');
-  }
 }
 
 /**
@@ -121,7 +72,7 @@ export async function createInvitation(
 ): Promise<CreateInvitationOutput> {
   const userId = auth.uid;
 
-  await verifyInviterAuthority(db, input.eventId, userId);
+  await verifyEventManagementAuthority(db, input.eventId, userId);
   await assertNoDuplicatePendingInvitation(db, input.eventId, input.invitedEmail);
 
   const now = new Date();

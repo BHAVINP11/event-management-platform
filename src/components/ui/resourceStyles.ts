@@ -466,4 +466,82 @@ export const resourceStyles = `
       grid-template-columns: 1fr;
     }
   }
+
+  /* Guests page: toolbar (search + filter tabs), counts, row actions */
+
+  .guest-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .guest-search-input {
+    padding: 0.6rem 0.9rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    min-width: 220px;
+  }
+
+  .guest-search-input:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+  }
+
+  .guest-filter-tabs {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .guest-filter-tab {
+    padding: 0.45rem 0.9rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    background: white;
+    color: #475569;
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .guest-filter-tab.active {
+    background: #0066cc;
+    border-color: #0066cc;
+    color: white;
+  }
+
+  .guest-counts {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .guest-count {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .guest-count-value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .guest-count-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #94a3b8;
+  }
+
+  .resource-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
 `;

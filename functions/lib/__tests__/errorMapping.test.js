@@ -30,7 +30,12 @@ describe('mapErrorToCallableResponse', () => {
         ['invitation_not_found', 'not-found'],
         ['invitation_not_pending', 'failed-precondition'],
         ['invitation_expired', 'failed-precondition'],
-        ['invitation_email_mismatch', 'permission-denied']
+        ['invitation_email_mismatch', 'permission-denied'],
+        ['invalid_guest_id', 'invalid-argument'],
+        ['invalid_status', 'invalid-argument'],
+        ['invalid_relation', 'invalid-argument'],
+        ['invalid_notes', 'invalid-argument'],
+        ['guest_not_found', 'not-found']
     ])('maps ValidationError(%s) to firebaseCode %s', (appCode, firebaseCode) => {
         const result = (0, errorMapping_1.mapErrorToCallableResponse)(new validation_1.ValidationError(appCode, 'some message'));
         expect(result.firebaseCode).toBe(firebaseCode);

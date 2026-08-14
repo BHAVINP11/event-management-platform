@@ -115,5 +115,19 @@ service cloud.firestore {
       // via createInvitation / acceptInvitation Cloud Functions)
       allow write: if false;
     }
+
+    // Guest rules
+    // guests/{guestId} — any active event member may view an event's
+    // guests (owner, planner, couple, family, staff, viewer alike); only
+    // the trusted createGuest/updateGuest/deleteGuest Cloud Functions may
+    // write, after independently verifying the caller has a management
+    // role (owner/planner). A flat collection carrying an eventId field,
+    // like eventMembers/invitations — not an events/{eventId}/guests
+    // subcollection.
+    match /guests/{guestId} {
+      allow read: if isActiveEventMember(resource.data.eventId);
+
+      allow write: if false;
+    }
   }
 }

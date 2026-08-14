@@ -11,19 +11,6 @@ interface AuthContext {
 }
 export declare function validateCreateInvitationInput(input: unknown): CreateInvitationInput;
 /**
- * Verifies the caller may invite people to the given event.
- *
- * Loads the membership by its deterministic ID rather than trusting anything
- * the client asserted about its own access — mirrors
- * `verifyOrganizationEventCreationAccess` in
- * `functions/src/events/createOrganizationEvent.ts`.
- *
- * @throws ValidationError('event_not_found') if the event does not exist
- * @throws ValidationError('event_access_denied') if there is no active membership
- * @throws ValidationError('event_role_not_allowed') if the role cannot invite
- */
-export declare function verifyInviterAuthority(db: FirebaseFirestore.Firestore, eventId: string, userId: string): Promise<void>;
-/**
  * Rejects a second pending invitation for the same event + email.
  *
  * @throws ValidationError('invitation_already_pending') if one already exists

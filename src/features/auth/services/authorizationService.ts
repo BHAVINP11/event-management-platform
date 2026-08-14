@@ -16,11 +16,12 @@ const eventCreationOrganizationRoles: readonly OrganizationRole[] = [
 ];
 
 /**
- * Event roles that are expected to invite people to an event. Used only to
- * decide whether the "Invite Person" entry point is offered in the UI; the
- * trusted createInvitation Cloud Function remains the authority.
+ * Event roles expected to manage an event's collaborator list and content
+ * (inviting people, adding/editing/removing guests, ...). Used only to
+ * decide which UI entry points are offered; the trusted Cloud Functions
+ * remain the authority.
  */
-const eventInvitationRoles: readonly EventRole[] = [EventRole.Owner, EventRole.Planner];
+const eventManagementRoles: readonly EventRole[] = [EventRole.Owner, EventRole.Planner];
 
 export class AuthorizationService {
   constructor(
@@ -142,6 +143,17 @@ export class AuthorizationService {
    * event. Pure so callers can reuse a membership they have already loaded.
    */
   canInviteToEvent(membership: EventMember): boolean {
-    return membership.status === MembershipStatus.Active && eventInvitationRoles.includes(membership.role);
+    return membership.status === MembershipStatus.Active && eventManagementRoles.includes(membership.role);
+  }
+
+  /**
+   * Whether an event membership implies the user may add/edit/remove
+   * guests for that event. Currently identical to `canInviteToEvent` — both
+   * are "manages this event's collaborators and content" — kept as a
+   * separately named method since the two checks are conceptually distinct
+   * and may diverge once granular per-role guest permissions exist.
+   */
+  canManageEventGuests(membership: EventMember): boolean {
+    return membership.status === MembershipStatus.Active && eventManagementRoles.includes(membership.role);
   }
 }

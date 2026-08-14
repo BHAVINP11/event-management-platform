@@ -187,3 +187,96 @@ export declare const onAcceptInvitation: functions.HttpsFunction & functions.Run
  * - internal_error: Server error
  */
 export declare const onGetInvitationPreview: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Callable Cloud Function: createGuest
+ *
+ * Adds a guest to an event. The caller must have an active EventMember with
+ * role owner or planner. `id`, `eventId` (from the request), `createdBy`,
+ * and the timestamps are never trusted from the client beyond the
+ * requested `eventId`, which is independently verified.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   name: string,
+ *   phone?: string,
+ *   email?: string,
+ *   side: string ('bride' | 'groom' | 'both'),
+ *   relation?: string,
+ *   notes?: string,
+ *   status?: string ('pending' | 'invited' | 'confirmed' | 'declined', default 'pending')
+ * }
+ *
+ * Output:
+ * {
+ *   guestId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage guests
+ * - internal_error: Server error
+ */
+export declare const onCreateGuest: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Callable Cloud Function: updateGuest
+ *
+ * Edits a guest's fields. Authority is verified against the guest's
+ * *stored* eventId, never one the client could supply, so a client cannot
+ * retarget an edit at a different event's guest. `id`, `eventId`,
+ * `createdBy`, and `createdAt` are carried over from the existing document.
+ *
+ * Input:
+ * {
+ *   guestId: string,
+ *   name: string,
+ *   phone?: string,
+ *   email?: string,
+ *   side: string,
+ *   relation?: string,
+ *   notes?: string,
+ *   status?: string
+ * }
+ *
+ * Output:
+ * {
+ *   guestId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - guest_not_found: Guest does not exist
+ * - event_access_denied: Caller has no active membership in the guest's event
+ * - event_role_not_allowed: Caller's role cannot manage guests
+ * - internal_error: Server error
+ */
+export declare const onUpdateGuest: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Callable Cloud Function: deleteGuest
+ *
+ * Removes a guest. Authority is verified against the guest's *stored*
+ * eventId, exactly like updateGuest.
+ *
+ * Input:
+ * {
+ *   guestId: string
+ * }
+ *
+ * Output:
+ * {
+ *   guestId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_guest_id: Input validation error
+ * - guest_not_found: Guest does not exist
+ * - event_access_denied: Caller has no active membership in the guest's event
+ * - event_role_not_allowed: Caller's role cannot manage guests
+ * - internal_error: Server error
+ */
+export declare const onDeleteGuest: functions.HttpsFunction & functions.Runnable<any>;

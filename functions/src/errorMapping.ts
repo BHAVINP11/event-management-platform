@@ -50,7 +50,8 @@ const KNOWN_APP_CODES: Record<string, FirebaseCallableErrorCode> = {
   invitation_not_found: 'not-found',
   invitation_not_pending: 'failed-precondition',
   invitation_expired: 'failed-precondition',
-  invitation_email_mismatch: 'permission-denied'
+  invitation_email_mismatch: 'permission-denied',
+  guest_not_found: 'not-found'
 };
 
 function firebaseCodeFor(appCode: string): FirebaseCallableErrorCode {

@@ -1,19 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateCreateInvitationInput = validateCreateInvitationInput;
-exports.verifyInviterAuthority = verifyInviterAuthority;
 exports.assertNoDuplicatePendingInvitation = assertNoDuplicatePendingInvitation;
 exports.createInvitation = createInvitation;
 exports.handleCreateInvitation = handleCreateInvitation;
 const validation_1 = require("../validation");
-const membershipIds_1 = require("../shared/membershipIds");
+const eventAuthority_1 = require("../shared/eventAuthority");
 const shared_1 = require("./shared");
-/**
- * Event roles allowed to invite people to an event. Granular per-role
- * invitation permissions are a future step — for now, only the two roles
- * capable of creating the event's collaborator list may extend it.
- */
-const INVITER_ALLOWED_ROLES = ['owner', 'planner'];
 /** How long a new invitation remains acceptable. Not client-configurable. */
 const INVITATION_EXPIRY_DAYS = 14;
 function validateCreateInvitationInput(input) {
@@ -26,36 +19,6 @@ function validateCreateInvitationInput(input) {
     }
     const fields = (0, shared_1.validateInvitationFields)(obj);
     return { eventId: obj.eventId, ...fields };
-}
-/**
- * Verifies the caller may invite people to the given event.
- *
- * Loads the membership by its deterministic ID rather than trusting anything
- * the client asserted about its own access — mirrors
- * `verifyOrganizationEventCreationAccess` in
- * `functions/src/events/createOrganizationEvent.ts`.
- *
- * @throws ValidationError('event_not_found') if the event does not exist
- * @throws ValidationError('event_access_denied') if there is no active membership
- * @throws ValidationError('event_role_not_allowed') if the role cannot invite
- */
-async function verifyInviterAuthority(db, eventId, userId) {
-    const eventSnapshot = await db.collection('events').doc(eventId).get();
-    if (!eventSnapshot.exists) {
-        throw new validation_1.ValidationError('event_not_found', 'Event not found.');
-    }
-    const membershipId = (0, membershipIds_1.getEventMembershipId)(eventId, userId);
-    const membershipSnapshot = await db.collection('eventMembers').doc(membershipId).get();
-    const membership = membershipSnapshot.data();
-    if (!membershipSnapshot.exists ||
-        !membership ||
-        membership.eventId !== eventId ||
-        membership.status !== 'active') {
-        throw new validation_1.ValidationError('event_access_denied', 'You do not have access to this event.');
-    }
-    if (!membership.role || !INVITER_ALLOWED_ROLES.includes(membership.role)) {
-        throw new validation_1.ValidationError('event_role_not_allowed', 'Your role does not allow inviting people to this event.');
-    }
 }
 /**
  * Rejects a second pending invitation for the same event + email.
@@ -81,7 +44,7 @@ async function assertNoDuplicatePendingInvitation(db, eventId, invitedEmail) {
  */
 async function createInvitation(db, auth, input) {
     const userId = auth.uid;
-    await verifyInviterAuthority(db, input.eventId, userId);
+    await (0, eventAuthority_1.verifyEventManagementAuthority)(db, input.eventId, userId);
     await assertNoDuplicatePendingInvitation(db, input.eventId, input.invitedEmail);
     const now = new Date();
     const nowIso = now.toISOString();

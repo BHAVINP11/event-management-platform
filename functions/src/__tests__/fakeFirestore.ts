@@ -1,8 +1,8 @@
 /**
  * Minimal in-memory stand-in for the Admin SDK Firestore surface actually used
  * by the trusted Cloud Functions: `collection(name).doc(id?)`, `.get()` /
- * `.set()` / `.update()`, simple equality `.where()` queries, and
- * `.batch()`/`.commit()`.
+ * `.set()` / `.update()` / `.delete()`, simple equality `.where()` queries,
+ * and `.batch()`/`.commit()`.
  *
  * This lets business logic be unit tested without the Firestore emulator
  * (which needs a local Java runtime) and without initializing the Admin SDK.
@@ -42,6 +42,10 @@ class FakeDocRef {
   async update(data: Record<string, unknown>): Promise<void> {
     const existing = this.store.get(this.path) ?? {};
     this.store.set(this.path, { ...existing, ...data });
+  }
+
+  async delete(): Promise<void> {
+    this.store.delete(this.path);
   }
 }
 

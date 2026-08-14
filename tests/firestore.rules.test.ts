@@ -47,6 +47,17 @@ const eventMember = (eventId: string, userId: string, status: string) => ({
   updatedAt: now
 });
 
+const guest = (eventId: string, name = 'Rajesh Patel') => ({
+  id: 'guest1',
+  eventId,
+  name,
+  side: 'bride',
+  status: 'pending',
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now
+});
+
 const invitation = (eventId: string, invitedEmail: string, status = 'pending') => ({
   id: 'invitation1',
   eventId,
@@ -386,6 +397,89 @@ describe('Firestore Security Rules', () => {
     test('client cannot create an eventMember directly, e.g. to accept an invitation without the Cloud Function', async () => {
       await expect(
         testEnv.authenticatedContext('user1').firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'))
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Guests', () => {
+    test('an active event member can read a guest for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').get()).resolves.toBeDefined();
+    });
+
+    test('an active event member can list every guest for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Rajesh Patel'));
+        await adminDb.firestore().collection('guests').doc('guest2').set(guest('event1', 'Meena Shah'));
+        await adminDb.firestore().collection('guests').doc('guest3').set(guest('event2', 'Someone Else'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('guests').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(2);
+    });
+
+    test('an unauthenticated user cannot read a guest', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('guests').doc('guest1').set(guest('event1')));
+
+      await expect(testEnv.unauthenticatedContext().firestore().collection('guests').doc('guest1').get()).rejects.toThrow();
+    });
+
+    test('an inactive event member cannot read that event\'s guests', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'inactive'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').get()).rejects.toThrow();
+    });
+
+    test('a member of a different event cannot read this event\'s guest (event isolation)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event2', 'user1')).set(eventMember('event2', 'user1', 'active'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').get()).rejects.toThrow();
+    });
+
+    test('a non-member cannot list guests for an event they do not belong to', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('guests').doc('guest1').set(guest('event1')));
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').where('eventId', '==', 'event1').get()).rejects.toThrow();
+    });
+
+    test('client cannot create a guest directly', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active')));
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').set(guest('event1'))
+      ).rejects.toThrow();
+    });
+
+    test('client cannot update a guest directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').update({ status: 'confirmed' })
+      ).rejects.toThrow();
+    });
+
+    test('client cannot delete a guest directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').delete()
       ).rejects.toThrow();
     });
   });
