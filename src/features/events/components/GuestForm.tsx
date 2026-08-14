@@ -4,11 +4,11 @@ import { GuestFormInput } from '@/features/events/types/guests';
 import { Guest, GuestSide, GuestStatus } from '@/types/guest';
 import { GuestError } from '@/lib/appError';
 
-const SIDE_OPTIONS: { value: GuestSide; label: string }[] = [
-  { value: GuestSide.Bride, label: 'Bride' },
-  { value: GuestSide.Groom, label: 'Groom' },
-  { value: GuestSide.Both, label: 'Both' }
-];
+const ALL_SIDE_LABELS: Record<GuestSide, string> = {
+  [GuestSide.Bride]: 'Bride',
+  [GuestSide.Groom]: 'Groom',
+  [GuestSide.Both]: 'Both'
+};
 
 const STATUS_OPTIONS: { value: GuestStatus; label: string }[] = [
   { value: GuestStatus.Pending, label: 'Pending' },
@@ -27,11 +27,11 @@ interface GuestFormFields {
   status: GuestStatus;
 }
 
-const toFields = (guest?: Guest): GuestFormFields => ({
+const toFields = (guest: Guest | undefined, allowedSides: readonly GuestSide[]): GuestFormFields => ({
   name: guest?.name ?? '',
   phone: guest?.phone ?? '',
   email: guest?.email ?? '',
-  side: guest?.side ?? GuestSide.Bride,
+  side: guest?.side ?? allowedSides[0] ?? GuestSide.Bride,
   relation: guest?.relation ?? '',
   notes: guest?.notes ?? '',
   status: guest?.status ?? GuestStatus.Pending
@@ -48,23 +48,28 @@ const toInput = (fields: GuestFormFields): GuestFormInput => ({
 });
 
 /**
- * Add/edit guest form. Owner/planner only — the page never mounts this for
- * anyone else, and createGuest/updateGuest independently re-verify that
- * regardless. `eventId`/`createdBy`/`id`/`createdAt` are never part of this
- * form; the Cloud Function derives or preserves them itself.
+ * Add/edit guest form. Only mounted for users with `canManage` — and even
+ * then, the Side field only offers the sides `allowedSides` says this
+ * caller may set (all three for owner/planner, bride+both or groom+both
+ * for a couple member). createGuest/updateGuest independently re-verify
+ * the chosen side server-side regardless. `eventId`/`createdBy`/`id`/
+ * `createdAt` are never part of this form; the Cloud Function derives or
+ * preserves them itself.
  */
 export function GuestForm({
   eventId,
   guest,
+  allowedSides,
   onSaved,
   onCancel
 }: {
   eventId: string;
   guest?: Guest;
+  allowedSides: readonly GuestSide[];
   onSaved: () => void;
   onCancel: () => void;
 }): JSX.Element {
-  const [fields, setFields] = useState<GuestFormFields>(toFields(guest));
+  const [fields, setFields] = useState<GuestFormFields>(toFields(guest, allowedSides));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -141,9 +146,9 @@ export function GuestForm({
         <div className="form-group">
           <label htmlFor="guest-side">Side *</label>
           <select id="guest-side" name="side" value={fields.side} onChange={handleChange} disabled={submitting}>
-            {SIDE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+            {allowedSides.map((side) => (
+              <option key={side} value={side}>
+                {ALL_SIDE_LABELS[side]}
               </option>
             ))}
           </select>

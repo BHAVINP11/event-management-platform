@@ -20,7 +20,8 @@ const KNOWN_APP_CODES = {
     invitation_not_pending: 'failed-precondition',
     invitation_expired: 'failed-precondition',
     invitation_email_mismatch: 'permission-denied',
-    guest_not_found: 'not-found'
+    guest_not_found: 'not-found',
+    guest_side_not_allowed: 'permission-denied'
 };
 function firebaseCodeFor(appCode) {
     if (appCode in KNOWN_APP_CODES) {

@@ -1,6 +1,7 @@
 import { ValidationError } from '../validation';
 import { CallableAuthContext } from '../shared/callableContext';
-import { verifyEventManagementAuthority } from '../shared/eventAuthority';
+import { loadActiveEventMembership } from '../shared/eventAuthority';
+import { assertCanUpdateGuest } from './authorization';
 import { GuestFields, buildGuestDocument, validateGuestFields } from './shared';
 
 export interface UpdateGuestInput extends GuestFields {
@@ -17,6 +18,7 @@ interface AuthContext {
 
 interface ExistingGuestData {
   eventId?: string;
+  side?: string;
   createdBy?: string;
   createdAt?: string;
 }
@@ -38,11 +40,15 @@ export function validateUpdateGuestInput(input: unknown): UpdateGuestInput {
 }
 
 /**
- * Updates a guest after verifying the caller has a management role (owner
- * or planner) for the guest's *stored* event — never a client-supplied
- * eventId, so a client cannot retarget an edit at a different event. `id`,
- * `eventId`, `createdBy`, and `createdAt` are carried over from the existing
- * document regardless of what the client sends.
+ * Updates a guest after verifying the caller may update it: authority is
+ * checked against the guest's *stored* eventId and side — never a
+ * client-supplied eventId, so a client cannot retarget an edit at a
+ * different event's guest, and never a client-supplied "current side," so
+ * a couple member cannot claim a groom-only guest was already theirs to
+ * edit. A couple member must be entitled to both the guest's existing side
+ * and the requested new side — this is what allows bride→both but rejects
+ * bride→groom. `id`, `eventId`, `createdBy`, and `createdAt` are carried
+ * over from the existing document regardless of what the client sends.
  *
  * @throws ValidationError('guest_not_found') if the guest does not exist
  */
@@ -55,11 +61,12 @@ export async function updateGuest(
   const snapshot = await guestRef.get();
   const existing = snapshot.data() as ExistingGuestData | undefined;
 
-  if (!snapshot.exists || !existing || !existing.eventId) {
+  if (!snapshot.exists || !existing || !existing.eventId || !existing.side) {
     throw new ValidationError('guest_not_found', 'Guest not found.');
   }
 
-  await verifyEventManagementAuthority(db, existing.eventId, auth.uid);
+  const membership = await loadActiveEventMembership(db, existing.eventId, auth.uid);
+  assertCanUpdateGuest(membership, existing.side, input.side);
 
   const now = new Date().toISOString();
   await guestRef.set(

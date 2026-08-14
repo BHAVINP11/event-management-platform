@@ -5,6 +5,7 @@ exports.createGuest = createGuest;
 exports.handleCreateGuest = handleCreateGuest;
 const validation_1 = require("../validation");
 const eventAuthority_1 = require("../shared/eventAuthority");
+const authorization_1 = require("./authorization");
 const shared_1 = require("./shared");
 function validateCreateGuestInput(input) {
     if (!input || typeof input !== 'object') {
@@ -18,13 +19,16 @@ function validateCreateGuestInput(input) {
     return { eventId: obj.eventId, ...fields };
 }
 /**
- * Creates a guest after verifying the caller has a management role (owner
- * or planner) for the event. The client never chooses `id`, `createdBy`, or
- * the timestamps.
+ * Creates a guest after verifying the caller may create a guest of the
+ * requested side for the event: owner/planner may create any side; a
+ * couple member (bride/groom) only bride/both or groom/both respectively;
+ * family/staff/viewer may not create at all. The client never chooses
+ * `id`, `createdBy`, or the timestamps.
  */
 async function createGuest(db, auth, input) {
     const userId = auth.uid;
-    await (0, eventAuthority_1.verifyEventManagementAuthority)(db, input.eventId, userId);
+    const membership = await (0, eventAuthority_1.loadActiveEventMembership)(db, input.eventId, userId);
+    (0, authorization_1.assertCanCreateGuest)(membership, input.side);
     const now = new Date().toISOString();
     const guestRef = db.collection('guests').doc();
     const guestId = guestRef.id;

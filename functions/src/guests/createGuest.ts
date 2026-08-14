@@ -1,6 +1,7 @@
 import { ValidationError } from '../validation';
 import { CallableAuthContext } from '../shared/callableContext';
-import { verifyEventManagementAuthority } from '../shared/eventAuthority';
+import { loadActiveEventMembership } from '../shared/eventAuthority';
+import { assertCanCreateGuest } from './authorization';
 import { GuestFields, buildGuestDocument, validateGuestFields } from './shared';
 
 export interface CreateGuestInput extends GuestFields {
@@ -32,9 +33,11 @@ export function validateCreateGuestInput(input: unknown): CreateGuestInput {
 }
 
 /**
- * Creates a guest after verifying the caller has a management role (owner
- * or planner) for the event. The client never chooses `id`, `createdBy`, or
- * the timestamps.
+ * Creates a guest after verifying the caller may create a guest of the
+ * requested side for the event: owner/planner may create any side; a
+ * couple member (bride/groom) only bride/both or groom/both respectively;
+ * family/staff/viewer may not create at all. The client never chooses
+ * `id`, `createdBy`, or the timestamps.
  */
 export async function createGuest(
   db: FirebaseFirestore.Firestore,
@@ -43,7 +46,8 @@ export async function createGuest(
 ): Promise<CreateGuestOutput> {
   const userId = auth.uid;
 
-  await verifyEventManagementAuthority(db, input.eventId, userId);
+  const membership = await loadActiveEventMembership(db, input.eventId, userId);
+  assertCanCreateGuest(membership, input.side);
 
   const now = new Date().toISOString();
   const guestRef = db.collection('guests').doc();

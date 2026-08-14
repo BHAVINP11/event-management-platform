@@ -5,6 +5,7 @@ exports.updateGuest = updateGuest;
 exports.handleUpdateGuest = handleUpdateGuest;
 const validation_1 = require("../validation");
 const eventAuthority_1 = require("../shared/eventAuthority");
+const authorization_1 = require("./authorization");
 const shared_1 = require("./shared");
 function validateUpdateGuestInput(input) {
     if (!input || typeof input !== 'object') {
@@ -18,11 +19,15 @@ function validateUpdateGuestInput(input) {
     return { guestId: obj.guestId, ...fields };
 }
 /**
- * Updates a guest after verifying the caller has a management role (owner
- * or planner) for the guest's *stored* event — never a client-supplied
- * eventId, so a client cannot retarget an edit at a different event. `id`,
- * `eventId`, `createdBy`, and `createdAt` are carried over from the existing
- * document regardless of what the client sends.
+ * Updates a guest after verifying the caller may update it: authority is
+ * checked against the guest's *stored* eventId and side — never a
+ * client-supplied eventId, so a client cannot retarget an edit at a
+ * different event's guest, and never a client-supplied "current side," so
+ * a couple member cannot claim a groom-only guest was already theirs to
+ * edit. A couple member must be entitled to both the guest's existing side
+ * and the requested new side — this is what allows bride→both but rejects
+ * bride→groom. `id`, `eventId`, `createdBy`, and `createdAt` are carried
+ * over from the existing document regardless of what the client sends.
  *
  * @throws ValidationError('guest_not_found') if the guest does not exist
  */
@@ -30,10 +35,11 @@ async function updateGuest(db, auth, input) {
     const guestRef = db.collection('guests').doc(input.guestId);
     const snapshot = await guestRef.get();
     const existing = snapshot.data();
-    if (!snapshot.exists || !existing || !existing.eventId) {
+    if (!snapshot.exists || !existing || !existing.eventId || !existing.side) {
         throw new validation_1.ValidationError('guest_not_found', 'Guest not found.');
     }
-    await (0, eventAuthority_1.verifyEventManagementAuthority)(db, existing.eventId, auth.uid);
+    const membership = await (0, eventAuthority_1.loadActiveEventMembership)(db, existing.eventId, auth.uid);
+    (0, authorization_1.assertCanUpdateGuest)(membership, existing.side, input.side);
     const now = new Date().toISOString();
     await guestRef.set((0, shared_1.buildGuestDocument)(input.guestId, existing.eventId, existing.createdBy ?? auth.uid, input, existing.createdAt ?? now, now));
     return { guestId: input.guestId };

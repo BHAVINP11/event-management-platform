@@ -10,8 +10,9 @@ interface AuthContext {
 }
 export declare function validateDeleteGuestInput(input: unknown): DeleteGuestInput;
 /**
- * Deletes a guest after verifying the caller has a management role (owner
- * or planner) for the guest's *stored* event.
+ * Deletes a guest after verifying the caller may delete it, checked
+ * against the guest's *stored* eventId and side — never a client-supplied
+ * value.
  *
  * @throws ValidationError('guest_not_found') if the guest does not exist
  */

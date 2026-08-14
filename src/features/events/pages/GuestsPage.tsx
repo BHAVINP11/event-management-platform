@@ -135,6 +135,7 @@ export function GuestsPage(): JSX.Element {
             <GuestForm
               eventId={eventId}
               guest={formMode === 'add' ? undefined : formMode}
+              allowedSides={state.data.manageableSides}
               onSaved={() => {
                 setFormMode('closed');
                 reload();

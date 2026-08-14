@@ -35,6 +35,19 @@ service cloud.firestore {
         get(membershipPath).data.userId == request.auth.uid;
     }
 
+    // Guest visibility scoping. Assumes isActiveEventMember(eventId) is
+    // already true. Owner/planner/family/staff/viewer see every guest (Step
+    // 12 does not scope Family yet — see docs/guests.md); a couple member
+    // (bride/groom) is scoped to their own side plus "both", matching
+    // functions/src/guests/authorization.ts's canViewGuest exactly.
+    function canAccessGuestForEvent(eventId, guestSide) {
+      let membershipPath = /databases/$(database)/documents/eventMembers/$(eventId + "_" + request.auth.uid);
+      let membership = get(membershipPath).data;
+      return membership.role in ["owner", "planner", "family", "staff", "viewer"] ||
+        (membership.role == "couple" && membership.side == "bride" && guestSide in ["bride", "both"]) ||
+        (membership.role == "couple" && membership.side == "groom" && guestSide in ["groom", "both"]);
+    }
+
     // Default deny all
     match /{document=**} {
       allow read, write: if false;
@@ -117,15 +130,17 @@ service cloud.firestore {
     }
 
     // Guest rules
-    // guests/{guestId} — any active event member may view an event's
-    // guests (owner, planner, couple, family, staff, viewer alike); only
+    // guests/{guestId} — owner/planner/family/staff/viewer may view every
+    // guest for their event; a couple member (bride/groom) only guests on
+    // their own side plus "both" (see canAccessGuestForEvent above). Only
     // the trusted createGuest/updateGuest/deleteGuest Cloud Functions may
-    // write, after independently verifying the caller has a management
-    // role (owner/planner). A flat collection carrying an eventId field,
-    // like eventMembers/invitations — not an events/{eventId}/guests
-    // subcollection.
+    // write, after independently re-verifying the same scope plus role
+    // (owner/planner/couple — never family/staff/viewer). A flat
+    // collection carrying an eventId field, like eventMembers/invitations —
+    // not an events/{eventId}/guests subcollection.
     match /guests/{guestId} {
-      allow read: if isActiveEventMember(resource.data.eventId);
+      allow read: if isActiveEventMember(resource.data.eventId) &&
+        canAccessGuestForEvent(resource.data.eventId, resource.data.side);
 
       allow write: if false;
     }

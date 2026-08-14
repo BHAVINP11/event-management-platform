@@ -37,21 +37,28 @@ const organizationMember = (organizationId: string, userId: string, status: stri
   updatedAt: now
 });
 
-const eventMember = (eventId: string, userId: string, status: string) => ({
+const eventMember = (
+  eventId: string,
+  userId: string,
+  status: string,
+  role = 'owner',
+  side?: string
+) => ({
   id: eventMembershipId(eventId, userId),
   eventId,
   userId,
-  role: 'owner',
+  role,
   status,
+  ...(side ? { side } : {}),
   createdAt: now,
   updatedAt: now
 });
 
-const guest = (eventId: string, name = 'Rajesh Patel') => ({
+const guest = (eventId: string, name = 'Rajesh Patel', side = 'bride') => ({
   id: 'guest1',
   eventId,
   name,
-  side: 'bride',
+  side,
   status: 'pending',
   createdBy: 'owner1',
   createdAt: now,
@@ -481,6 +488,108 @@ describe('Firestore Security Rules', () => {
       await expect(
         testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').delete()
       ).rejects.toThrow();
+    });
+  });
+
+  // Step 12: guests are scoped for couple members (bride/groom) — their own
+  // side plus "both". Owner/planner/family/staff/viewer keep full access.
+  describe('Guests: bride/groom scoping', () => {
+    test('a bride member can read a bride-side guest', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'couple', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Rajesh Patel', 'bride'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').get()).resolves.toBeDefined();
+    });
+
+    test('a bride member can read a both-side guest', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'couple', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Family Friend', 'both'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').get()).resolves.toBeDefined();
+    });
+
+    test('a bride member cannot read a groom-side guest', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'couple', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Groom Friend', 'groom'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').get()).rejects.toThrow();
+    });
+
+    test('a groom member can read groom and both guests, not a bride guest', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'couple', 'groom'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Groom Friend', 'groom'));
+        await adminDb.firestore().collection('guests').doc('guest2').set(guest('event1', 'Family Friend', 'both'));
+        await adminDb.firestore().collection('guests').doc('guest3').set(guest('event1', 'Bride Friend', 'bride'));
+      });
+
+      const db = testEnv.authenticatedContext('user1').firestore();
+      await expect(db.collection('guests').doc('guest1').get()).resolves.toBeDefined();
+      await expect(db.collection('guests').doc('guest2').get()).resolves.toBeDefined();
+      await expect(db.collection('guests').doc('guest3').get()).rejects.toThrow();
+    });
+
+    test('a bride member can list her scoped guests via two side-filtered queries', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'couple', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Bride Friend', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest2').set(guest('event1', 'Family Friend', 'both'));
+        await adminDb.firestore().collection('guests').doc('guest3').set(guest('event1', 'Groom Friend', 'groom'));
+      });
+
+      const db = testEnv.authenticatedContext('user1').firestore();
+      const brideQuery = await db.collection('guests').where('eventId', '==', 'event1').where('side', '==', 'bride').get();
+      const bothQuery = await db.collection('guests').where('eventId', '==', 'event1').where('side', '==', 'both').get();
+      expect(brideQuery.docs).toHaveLength(1);
+      expect(bothQuery.docs).toHaveLength(1);
+    });
+
+    test('a bride member cannot list guests for her event unfiltered by side', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'couple', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Bride Friend', 'bride'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('guests').where('eventId', '==', 'event1').get()
+      ).rejects.toThrow();
+    });
+
+    test('a bride member cannot query directly for groom-side guests', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'couple', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Groom Friend', 'groom'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('guests').where('eventId', '==', 'event1').where('side', '==', 'groom').get()
+      ).rejects.toThrow();
+    });
+
+    test.each(['family', 'staff', 'viewer'])('a %s member can read guests of any side', async (role) => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', role));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Groom Friend', 'groom'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('guests').doc('guest1').get()).resolves.toBeDefined();
+    });
+
+    test.each(['owner', 'planner'])('an %s can read guests of any side, unfiltered', async (role) => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', role));
+        await adminDb.firestore().collection('guests').doc('guest1').set(guest('event1', 'Bride Friend', 'bride'));
+        await adminDb.firestore().collection('guests').doc('guest2').set(guest('event1', 'Groom Friend', 'groom'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('guests').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(2);
     });
   });
 });

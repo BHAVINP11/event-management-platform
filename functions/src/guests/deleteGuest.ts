@@ -1,6 +1,7 @@
 import { ValidationError } from '../validation';
 import { CallableAuthContext } from '../shared/callableContext';
-import { verifyEventManagementAuthority } from '../shared/eventAuthority';
+import { loadActiveEventMembership } from '../shared/eventAuthority';
+import { assertCanDeleteGuest } from './authorization';
 
 export interface DeleteGuestInput {
   guestId: string;
@@ -29,8 +30,9 @@ export function validateDeleteGuestInput(input: unknown): DeleteGuestInput {
 }
 
 /**
- * Deletes a guest after verifying the caller has a management role (owner
- * or planner) for the guest's *stored* event.
+ * Deletes a guest after verifying the caller may delete it, checked
+ * against the guest's *stored* eventId and side — never a client-supplied
+ * value.
  *
  * @throws ValidationError('guest_not_found') if the guest does not exist
  */
@@ -41,13 +43,14 @@ export async function deleteGuest(
 ): Promise<DeleteGuestOutput> {
   const guestRef = db.collection('guests').doc(input.guestId);
   const snapshot = await guestRef.get();
-  const existing = snapshot.data() as { eventId?: string } | undefined;
+  const existing = snapshot.data() as { eventId?: string; side?: string } | undefined;
 
-  if (!snapshot.exists || !existing || !existing.eventId) {
+  if (!snapshot.exists || !existing || !existing.eventId || !existing.side) {
     throw new ValidationError('guest_not_found', 'Guest not found.');
   }
 
-  await verifyEventManagementAuthority(db, existing.eventId, auth.uid);
+  const membership = await loadActiveEventMembership(db, existing.eventId, auth.uid);
+  assertCanDeleteGuest(membership, existing.side);
   await guestRef.delete();
 
   return { guestId: input.guestId };

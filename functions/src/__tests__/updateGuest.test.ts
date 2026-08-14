@@ -26,13 +26,14 @@ function seedEventMember(
   fake: FakeFirestore,
   eventId: string,
   userId: string,
-  overrides: { status?: string; role?: string } = {}
+  overrides: { status?: string; role?: string; side?: string } = {}
 ): void {
   fake.seed('eventMembers', `${eventId}_${userId}`, {
     eventId,
     userId,
     status: overrides.status ?? 'active',
-    role: overrides.role ?? 'owner'
+    role: overrides.role ?? 'owner',
+    ...(overrides.side ? { side: overrides.side } : {})
   });
 }
 
@@ -103,11 +104,137 @@ describe('handleUpdateGuest', () => {
     expect(fake.read('guests', GUEST_ID)?.status).toBe('confirmed');
   });
 
-  test('a couple member can view but cannot update a guest', async () => {
+  test.each([
+    ['bride', 'groom'],
+    ['groom', 'bride'],
+    ['bride', 'both']
+  ])('an owner can change a %s guest to %s', async (existingSide, newSide) => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: existingSide });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'owner' });
+    const db = asFirestore(fake);
+
+    await handleUpdateGuest(db, { ...validInput, side: newSide }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', GUEST_ID)?.side).toBe(newSide);
+  });
+
+  test('a bride member can update a bride guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'bride' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'bride' });
+    const db = asFirestore(fake);
+
+    await handleUpdateGuest(db, { ...validInput, side: 'bride' }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', GUEST_ID)?.name).toBe('Rajesh R. Patel');
+  });
+
+  test('a bride member can update a both guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'both' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'bride' });
+    const db = asFirestore(fake);
+
+    await handleUpdateGuest(db, { ...validInput, side: 'both' }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', GUEST_ID)?.status).toBe('confirmed');
+  });
+
+  test('a bride member cannot update a groom guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'groom' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'bride' });
+    const db = asFirestore(fake);
+
+    await expect(
+      handleUpdateGuest(db, { ...validInput, side: 'groom' }, { auth: { uid: 'user1' } })
+    ).rejects.toMatchObject({ code: 'guest_side_not_allowed' });
+  });
+
+  test('a bride member can change a bride guest to both', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'bride' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'bride' });
+    const db = asFirestore(fake);
+
+    await handleUpdateGuest(db, { ...validInput, side: 'both' }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', GUEST_ID)?.side).toBe('both');
+  });
+
+  test('a bride member cannot change a bride guest to groom', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'bride' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'bride' });
+    const db = asFirestore(fake);
+
+    await expect(
+      handleUpdateGuest(db, { ...validInput, side: 'groom' }, { auth: { uid: 'user1' } })
+    ).rejects.toMatchObject({ code: 'guest_side_not_allowed' });
+    expect(fake.read('guests', GUEST_ID)?.side).toBe('bride');
+  });
+
+  test('a groom member can update a groom guest and change it to both', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'groom' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'groom' });
+    const db = asFirestore(fake);
+
+    await handleUpdateGuest(db, { ...validInput, side: 'both' }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', GUEST_ID)?.side).toBe('both');
+  });
+
+  test('a groom member can update a both guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'both' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'groom' });
+    const db = asFirestore(fake);
+
+    await handleUpdateGuest(db, { ...validInput, side: 'both' }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', GUEST_ID)?.status).toBe('confirmed');
+  });
+
+  test('a groom member cannot update a bride guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'bride' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'groom' });
+    const db = asFirestore(fake);
+
+    await expect(
+      handleUpdateGuest(db, { ...validInput, side: 'bride' }, { auth: { uid: 'user1' } })
+    ).rejects.toMatchObject({ code: 'guest_side_not_allowed' });
+  });
+
+  test('a groom member cannot change a groom guest to bride', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake, { side: 'groom' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'groom' });
+    const db = asFirestore(fake);
+
+    await expect(
+      handleUpdateGuest(db, { ...validInput, side: 'bride' }, { auth: { uid: 'user1' } })
+    ).rejects.toMatchObject({ code: 'guest_side_not_allowed' });
+    expect(fake.read('guests', GUEST_ID)?.side).toBe('groom');
+  });
+
+  test('a family member cannot update a guest', async () => {
     const fake = new FakeFirestore();
     seedEvent(fake);
     seedGuest(fake);
-    seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'family' });
     const db = asFirestore(fake);
 
     await expect(handleUpdateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
@@ -115,11 +242,23 @@ describe('handleUpdateGuest', () => {
     });
   });
 
-  test('a family member can view but cannot update a guest', async () => {
+  test('a staff member cannot update a guest', async () => {
     const fake = new FakeFirestore();
     seedEvent(fake);
     seedGuest(fake);
-    seedEventMember(fake, EVENT_ID, 'user1', { role: 'family' });
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'staff' });
+    const db = asFirestore(fake);
+
+    await expect(handleUpdateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
+      code: 'event_role_not_allowed'
+    });
+  });
+
+  test('a viewer cannot update a guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedGuest(fake);
+    seedEventMember(fake, EVENT_ID, 'user1', { role: 'viewer' });
     const db = asFirestore(fake);
 
     await expect(handleUpdateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
@@ -166,6 +305,19 @@ describe('handleUpdateGuest', () => {
     seedEvent(fake, 'event2');
     seedGuest(fake, { eventId: 'event1' });
     seedEventMember(fake, 'event2', 'user1', { role: 'owner' });
+    const db = asFirestore(fake);
+
+    await expect(handleUpdateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
+      code: 'event_access_denied'
+    });
+  });
+
+  test("a bride of a different event cannot update this event's bride guest", async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake, 'event1');
+    seedEvent(fake, 'event2');
+    seedGuest(fake, { eventId: 'event1', side: 'bride' });
+    seedEventMember(fake, 'event2', 'user1', { role: 'couple', side: 'bride' });
     const db = asFirestore(fake);
 
     await expect(handleUpdateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({

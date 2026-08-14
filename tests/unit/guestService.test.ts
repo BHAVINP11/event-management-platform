@@ -1,7 +1,7 @@
 import { AuthorizationService } from '@/features/auth/services/authorizationService';
 import { GuestService } from '@/features/events/services/guestService';
 import { GuestError, EventLoadError } from '@/lib/appError';
-import { EventRole, MembershipStatus } from '@/types/membership';
+import { EventMemberSide, EventRole, MembershipStatus } from '@/types/membership';
 import { GuestSide, GuestStatus } from '@/types/guest';
 import {
   buildEvent,
@@ -101,7 +101,7 @@ describe('GuestService.listGuests', () => {
     expect(result.status === 'allowed' && result.data.counts).toEqual({ total: 4, bride: 3, groom: 2 });
   });
 
-  test('offers canManage to an owner and a planner, not to couple/family/viewer', async () => {
+  test('offers canManage to owner, planner, and a couple member; not to family/staff/viewer', async () => {
     const ownerWorld = buildWorld({
       events: [buildEvent({ id: 'event1' })],
       eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Owner })]
@@ -110,9 +110,13 @@ describe('GuestService.listGuests', () => {
       events: [buildEvent({ id: 'event1' })],
       eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Planner })]
     });
-    const coupleWorld = buildWorld({
+    const brideWorld = buildWorld({
       events: [buildEvent({ id: 'event1' })],
-      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Couple })]
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Couple, side: EventMemberSide.Bride })]
+    });
+    const familyWorld = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Family })]
     });
     const viewerWorld = buildWorld({
       events: [buildEvent({ id: 'event1' })],
@@ -121,13 +125,122 @@ describe('GuestService.listGuests', () => {
 
     const owner = await ownerWorld.service.listGuests('user1', 'event1');
     const planner = await plannerWorld.service.listGuests('user1', 'event1');
-    const couple = await coupleWorld.service.listGuests('user1', 'event1');
+    const bride = await brideWorld.service.listGuests('user1', 'event1');
+    const family = await familyWorld.service.listGuests('user1', 'event1');
     const viewer = await viewerWorld.service.listGuests('user1', 'event1');
 
     expect(owner.status === 'allowed' && owner.data.canManage).toBe(true);
     expect(planner.status === 'allowed' && planner.data.canManage).toBe(true);
-    expect(couple.status === 'allowed' && couple.data.canManage).toBe(false);
+    expect(bride.status === 'allowed' && bride.data.canManage).toBe(true);
+    expect(family.status === 'allowed' && family.data.canManage).toBe(false);
     expect(viewer.status === 'allowed' && viewer.data.canManage).toBe(false);
+  });
+
+  test('computes manageableSides per role', async () => {
+    const ownerWorld = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Owner })]
+    });
+    const brideWorld = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Couple, side: EventMemberSide.Bride })]
+    });
+    const groomWorld = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Couple, side: EventMemberSide.Groom })]
+    });
+    const familyWorld = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Family })]
+    });
+
+    const owner = await ownerWorld.service.listGuests('user1', 'event1');
+    const bride = await brideWorld.service.listGuests('user1', 'event1');
+    const groom = await groomWorld.service.listGuests('user1', 'event1');
+    const family = await familyWorld.service.listGuests('user1', 'event1');
+
+    expect(owner.status === 'allowed' && owner.data.manageableSides).toEqual([
+      GuestSide.Bride,
+      GuestSide.Groom,
+      GuestSide.Both
+    ]);
+    expect(bride.status === 'allowed' && bride.data.manageableSides).toEqual([GuestSide.Bride, GuestSide.Both]);
+    expect(groom.status === 'allowed' && groom.data.manageableSides).toEqual([GuestSide.Groom, GuestSide.Both]);
+    expect(family.status === 'allowed' && family.data.manageableSides).toEqual([]);
+  });
+
+  test('a bride member only sees bride and both guests, never groom-only guests', async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Couple, side: EventMemberSide.Bride })],
+      guests: [
+        buildGuest({ id: 'g1', eventId: 'event1', name: 'Bride Friend', side: GuestSide.Bride }),
+        buildGuest({ id: 'g2', eventId: 'event1', name: 'Family Friend', side: GuestSide.Both }),
+        buildGuest({ id: 'g3', eventId: 'event1', name: 'Groom Friend', side: GuestSide.Groom })
+      ]
+    });
+
+    const result = await service.listGuests('user1', 'event1');
+
+    expect(result.status).toBe('allowed');
+    if (result.status !== 'allowed') return;
+    expect(result.data.guests.map((g) => g.name).sort()).toEqual(['Bride Friend', 'Family Friend']);
+  });
+
+  test('a groom member only sees groom and both guests, never bride-only guests', async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Couple, side: EventMemberSide.Groom })],
+      guests: [
+        buildGuest({ id: 'g1', eventId: 'event1', name: 'Bride Friend', side: GuestSide.Bride }),
+        buildGuest({ id: 'g2', eventId: 'event1', name: 'Family Friend', side: GuestSide.Both }),
+        buildGuest({ id: 'g3', eventId: 'event1', name: 'Groom Friend', side: GuestSide.Groom })
+      ]
+    });
+
+    const result = await service.listGuests('user1', 'event1');
+
+    expect(result.status).toBe('allowed');
+    if (result.status !== 'allowed') return;
+    expect(result.data.guests.map((g) => g.name).sort()).toEqual(['Family Friend', 'Groom Friend']);
+  });
+
+  test('family/staff/viewer see every guest regardless of side', async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Family })],
+      guests: [
+        buildGuest({ id: 'g1', eventId: 'event1', side: GuestSide.Bride }),
+        buildGuest({ id: 'g2', eventId: 'event1', side: GuestSide.Groom })
+      ]
+    });
+
+    const result = await service.listGuests('user1', 'event1');
+
+    expect(result.status).toBe('allowed');
+    if (result.status !== 'allowed') return;
+    expect(result.data.guests).toHaveLength(2);
+  });
+
+  test("a bride's groom count reflects only both-side guests, never groom-only guests", async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1', { role: EventRole.Couple, side: EventMemberSide.Bride })],
+      guests: [
+        buildGuest({ id: 'g1', eventId: 'event1', side: GuestSide.Bride }),
+        buildGuest({ id: 'g2', eventId: 'event1', side: GuestSide.Both }),
+        buildGuest({ id: 'g3', eventId: 'event1', side: GuestSide.Groom }),
+        buildGuest({ id: 'g4', eventId: 'event1', side: GuestSide.Groom })
+      ]
+    });
+
+    const result = await service.listGuests('user1', 'event1');
+
+    // Visible to the bride: g1 (bride) + g2 (both) = 2 total. The two
+    // groom-only guests (g3, g4) are invisible to her entirely, so her
+    // "groom" count can only ever reflect the both-side guest she can
+    // already see (1), never the real groom-only count (2).
+    expect(result.status === 'allowed' && result.data.counts).toEqual({ total: 2, bride: 2, groom: 1 });
   });
 
   test('surfaces a repository failure as an application error', async () => {

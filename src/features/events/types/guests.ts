@@ -8,10 +8,19 @@ export interface GuestCounts {
 }
 
 export interface GuestListData {
+  /**
+   * Already scoped to what the current user may see: owner/planner/family/
+   * staff/viewer get every guest; a couple member (bride/groom) gets only
+   * their own side plus "both". Enforced by the repository read pattern and
+   * the Firestore rule, not merely filtered here.
+   */
   guests: Guest[];
+  /** Computed from the (already-scoped) `guests` above — see computeGuestCounts. */
   counts: GuestCounts;
-  /** Whether the current user may add/edit/remove guests (owner/planner). */
+  /** Whether the current user may add/edit/remove guests at all (owner/planner/couple). */
   canManage: boolean;
+  /** Which sides the current user may create or set a guest to. Empty when canManage is false. */
+  manageableSides: GuestSide[];
 }
 
 export type GuestListAccessResult =

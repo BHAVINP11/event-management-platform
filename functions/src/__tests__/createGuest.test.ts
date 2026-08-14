@@ -18,14 +18,15 @@ function seedEvent(fake: FakeFirestore, eventId = EVENT_ID): void {
 function seedEventMember(
   fake: FakeFirestore,
   userId: string,
-  overrides: { eventId?: string; status?: string; role?: string } = {}
+  overrides: { eventId?: string; status?: string; role?: string; side?: string } = {}
 ): void {
   const eventId = overrides.eventId ?? EVENT_ID;
-  fake.seed('eventMembers', `${EVENT_ID}_${userId}`, {
+  fake.seed('eventMembers', `${eventId}_${userId}`, {
     eventId,
     userId,
     status: overrides.status ?? 'active',
-    role: overrides.role ?? 'owner'
+    role: overrides.role ?? 'owner',
+    ...(overrides.side ? { side: overrides.side } : {})
   });
 }
 
@@ -86,10 +87,76 @@ describe('handleCreateGuest', () => {
     expect(fake.read('guests', result.guestId)?.status).toBe('pending');
   });
 
-  test('a couple member can view but cannot create a guest', async () => {
+  test.each(['bride', 'groom', 'both'])('an owner can create a %s guest', async (side) => {
     const fake = new FakeFirestore();
     seedEvent(fake);
-    seedEventMember(fake, 'user1', { role: 'couple' });
+    seedEventMember(fake, 'user1', { role: 'owner' });
+    const db = asFirestore(fake);
+
+    const result = await handleCreateGuest(db, { ...validInput, side }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', result.guestId)?.side).toBe(side);
+  });
+
+  test.each(['bride', 'groom', 'both'])('a planner can create a %s guest', async (side) => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedEventMember(fake, 'user1', { role: 'planner' });
+    const db = asFirestore(fake);
+
+    const result = await handleCreateGuest(db, { ...validInput, side }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', result.guestId)?.side).toBe(side);
+  });
+
+  test.each(['bride', 'both'])('a bride member can create a %s guest', async (side) => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedEventMember(fake, 'user1', { role: 'couple', side: 'bride' });
+    const db = asFirestore(fake);
+
+    const result = await handleCreateGuest(db, { ...validInput, side }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', result.guestId)?.side).toBe(side);
+  });
+
+  test('a bride member cannot create a groom guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedEventMember(fake, 'user1', { role: 'couple', side: 'bride' });
+    const db = asFirestore(fake);
+
+    await expect(
+      handleCreateGuest(db, { ...validInput, side: 'groom' }, { auth: { uid: 'user1' } })
+    ).rejects.toMatchObject({ code: 'guest_side_not_allowed' });
+  });
+
+  test.each(['groom', 'both'])('a groom member can create a %s guest', async (side) => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedEventMember(fake, 'user1', { role: 'couple', side: 'groom' });
+    const db = asFirestore(fake);
+
+    const result = await handleCreateGuest(db, { ...validInput, side }, { auth: { uid: 'user1' } });
+
+    expect(fake.read('guests', result.guestId)?.side).toBe(side);
+  });
+
+  test('a groom member cannot create a bride guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedEventMember(fake, 'user1', { role: 'couple', side: 'groom' });
+    const db = asFirestore(fake);
+
+    await expect(
+      handleCreateGuest(db, { ...validInput, side: 'bride' }, { auth: { uid: 'user1' } })
+    ).rejects.toMatchObject({ code: 'guest_side_not_allowed' });
+  });
+
+  test('a family member can view but cannot create a guest', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake);
+    seedEventMember(fake, 'user1', { role: 'family' });
     const db = asFirestore(fake);
 
     await expect(handleCreateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
@@ -97,10 +164,10 @@ describe('handleCreateGuest', () => {
     });
   });
 
-  test('a family member can view but cannot create a guest', async () => {
+  test('a staff member cannot create a guest', async () => {
     const fake = new FakeFirestore();
     seedEvent(fake);
-    seedEventMember(fake, 'user1', { role: 'family' });
+    seedEventMember(fake, 'user1', { role: 'staff' });
     const db = asFirestore(fake);
 
     await expect(handleCreateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
@@ -117,17 +184,6 @@ describe('handleCreateGuest', () => {
     await expect(handleCreateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
       code: 'event_role_not_allowed'
     });
-  });
-
-  test.each(['bride', 'groom', 'both'])('accepts side %s', async (side) => {
-    const fake = new FakeFirestore();
-    seedEvent(fake);
-    seedEventMember(fake, 'user1');
-    const db = asFirestore(fake);
-
-    const result = await handleCreateGuest(db, { ...validInput, side }, { auth: { uid: 'user1' } });
-
-    expect(fake.read('guests', result.guestId)?.side).toBe(side);
   });
 
   test('rejects a missing name', async () => {
@@ -213,12 +269,19 @@ describe('handleCreateGuest', () => {
     seedEvent(fake, 'event1');
     seedEvent(fake, 'event2');
     // user1 is a legitimate owner of event2, but has no membership in event1.
-    fake.seed('eventMembers', 'event2_user1', {
-      eventId: 'event2',
-      userId: 'user1',
-      status: 'active',
-      role: 'owner'
+    seedEventMember(fake, 'user1', { eventId: 'event2', role: 'owner' });
+    const db = asFirestore(fake);
+
+    await expect(handleCreateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
+      code: 'event_access_denied'
     });
+  });
+
+  test('a bride of a different event cannot create a bride guest for this event', async () => {
+    const fake = new FakeFirestore();
+    seedEvent(fake, 'event1');
+    seedEvent(fake, 'event2');
+    seedEventMember(fake, 'user1', { eventId: 'event2', role: 'couple', side: 'bride' });
     const db = asFirestore(fake);
 
     await expect(handleCreateGuest(db, validInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({

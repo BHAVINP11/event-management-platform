@@ -4,6 +4,9 @@ import { AuthorizationService } from '@/features/auth/services/authorizationServ
 import { EventRepository } from '@/repositories/interfaces/eventRepository';
 import { GuestRepository } from '@/repositories/interfaces/guestRepository';
 import { GuestFormInput, GuestListAccessResult, computeGuestCounts } from '@/features/events/types/guests';
+import { canManageGuests, manageableGuestSides } from '@/features/events/services/guestAuthorization';
+import { EventMember, EventMemberSide, EventRole } from '@/types/membership';
+import { Guest, GuestSide } from '@/types/guest';
 import { EventLoadError, GuestError } from '@/lib/appError';
 
 interface CreateGuestFunctionInput extends GuestFormInput {
@@ -57,11 +60,18 @@ const toGuestError = (error: unknown): GuestError => {
 };
 
 /**
- * Reads the guest list through the repository/Firestore-rules boundary
- * (any active event member may view guests); writes go exclusively through
- * the trusted createGuest/updateGuest/deleteGuest Cloud Functions, which
- * independently re-verify the caller has a management role (owner/planner)
- * — `canManage` here only decides whether the UI offers Add/Edit/Delete.
+ * Reads the guest list through the repository/Firestore-rules boundary;
+ * writes go exclusively through the trusted createGuest/updateGuest/
+ * deleteGuest Cloud Functions, which independently re-verify the caller's
+ * scope (owner/planner/couple, side-checked for couple) regardless of what
+ * this service or the UI show.
+ *
+ * Reads are scoped to what the caller may actually see: a couple member
+ * (bride/groom) only ever fetches their own side plus "both" — two
+ * `listByEventAndSide` reads instead of one `listByEvent`, so the Firestore
+ * rule can verify the query itself is scoped (see firestore.rules) rather
+ * than trusting this class to filter after the fact. Owner/planner/family/
+ * staff/viewer still get the single unfiltered read.
  */
 export class GuestService {
   constructor(
@@ -90,22 +100,51 @@ export class GuestService {
         return { status: 'notFound' };
       }
 
-      const [guests, membership] = await Promise.all([
-        this.guestRepository.listByEvent(eventId),
-        this.authorizationService.getEventMembership(userId, eventId)
-      ]);
+      const membership = await this.authorizationService.getEventMembership(userId, eventId);
+      const guests = membership ? await this.loadScopedGuests(eventId, membership) : [];
 
       return {
         status: 'allowed',
         data: {
           guests,
           counts: computeGuestCounts(guests),
-          canManage: Boolean(membership && this.authorizationService.canManageEventGuests(membership))
+          canManage: Boolean(membership && canManageGuests(membership)),
+          manageableSides: membership ? manageableGuestSides(membership) : []
         }
       };
     } catch {
       throw new EventLoadError();
     }
+  }
+
+  /**
+   * A couple member is scoped to their own side + "both"; every other role
+   * (owner/planner/family/staff/viewer) sees every guest for this step.
+   */
+  private async loadScopedGuests(eventId: string, membership: EventMember): Promise<Guest[]> {
+    if (membership.role !== EventRole.Couple) {
+      return this.guestRepository.listByEvent(eventId);
+    }
+
+    if (membership.side === EventMemberSide.Bride) {
+      const [bride, both] = await Promise.all([
+        this.guestRepository.listByEventAndSide(eventId, GuestSide.Bride),
+        this.guestRepository.listByEventAndSide(eventId, GuestSide.Both)
+      ]);
+      return [...bride, ...both];
+    }
+
+    if (membership.side === EventMemberSide.Groom) {
+      const [groom, both] = await Promise.all([
+        this.guestRepository.listByEventAndSide(eventId, GuestSide.Groom),
+        this.guestRepository.listByEventAndSide(eventId, GuestSide.Both)
+      ]);
+      return [...groom, ...both];
+    }
+
+    // A couple member with no side on record (shouldn't happen in
+    // practice) sees nothing rather than everything.
+    return [];
   }
 
   async createGuest(eventId: string, input: GuestFormInput): Promise<string> {

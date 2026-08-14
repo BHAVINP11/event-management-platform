@@ -35,7 +35,8 @@ describe('mapErrorToCallableResponse', () => {
         ['invalid_status', 'invalid-argument'],
         ['invalid_relation', 'invalid-argument'],
         ['invalid_notes', 'invalid-argument'],
-        ['guest_not_found', 'not-found']
+        ['guest_not_found', 'not-found'],
+        ['guest_side_not_allowed', 'permission-denied']
     ])('maps ValidationError(%s) to firebaseCode %s', (appCode, firebaseCode) => {
         const result = (0, errorMapping_1.mapErrorToCallableResponse)(new validation_1.ValidationError(appCode, 'some message'));
         expect(result.firebaseCode).toBe(firebaseCode);

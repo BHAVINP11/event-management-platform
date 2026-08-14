@@ -7,11 +7,11 @@ const GUEST_ID = 'guest1';
 function seedEvent(fake, eventId = EVENT_ID) {
     fake.seed('events', eventId, { id: eventId, name: 'Bhavin & Priya Wedding' });
 }
-function seedGuest(fake, eventId = EVENT_ID) {
+function seedGuest(fake, overrides = {}) {
     fake.seed('guests', GUEST_ID, {
-        eventId,
+        eventId: overrides.eventId ?? EVENT_ID,
         name: 'Rajesh Patel',
-        side: 'bride',
+        side: overrides.side ?? 'bride',
         status: 'pending',
         createdBy: 'owner1',
         createdAt: '2026-01-01T00:00:00.000Z',
@@ -23,7 +23,8 @@ function seedEventMember(fake, eventId, userId, overrides = {}) {
         eventId,
         userId,
         status: overrides.status ?? 'active',
-        role: overrides.role ?? 'owner'
+        role: overrides.role ?? 'owner',
+        ...(overrides.side ? { side: overrides.side } : {})
     });
 }
 const deleteInput = { guestId: GUEST_ID };
@@ -80,18 +81,56 @@ describe('handleDeleteGuest', () => {
         await (0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } });
         expect(fake.read('guests', GUEST_ID)).toBeUndefined();
     });
-    test('a couple member can view but cannot delete a guest', async () => {
+    test.each(['bride', 'groom', 'both'])('an owner can delete a %s guest', async (side) => {
         const fake = new fakeFirestore_1.FakeFirestore();
         seedEvent(fake);
-        seedGuest(fake);
-        seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple' });
+        seedGuest(fake, { side });
+        seedEventMember(fake, EVENT_ID, 'user1', { role: 'owner' });
+        const db = (0, fakeFirestore_1.asFirestore)(fake);
+        await (0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } });
+        expect(fake.read('guests', GUEST_ID)).toBeUndefined();
+    });
+    test.each(['bride', 'both'])('a bride member can delete a %s guest', async (side) => {
+        const fake = new fakeFirestore_1.FakeFirestore();
+        seedEvent(fake);
+        seedGuest(fake, { side });
+        seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'bride' });
+        const db = (0, fakeFirestore_1.asFirestore)(fake);
+        await (0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } });
+        expect(fake.read('guests', GUEST_ID)).toBeUndefined();
+    });
+    test('a bride member cannot delete a groom guest', async () => {
+        const fake = new fakeFirestore_1.FakeFirestore();
+        seedEvent(fake);
+        seedGuest(fake, { side: 'groom' });
+        seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'bride' });
         const db = (0, fakeFirestore_1.asFirestore)(fake);
         await expect((0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
-            code: 'event_role_not_allowed'
+            code: 'guest_side_not_allowed'
         });
         expect(fake.read('guests', GUEST_ID)).toBeDefined();
     });
-    test('a family member can view but cannot delete a guest', async () => {
+    test.each(['groom', 'both'])('a groom member can delete a %s guest', async (side) => {
+        const fake = new fakeFirestore_1.FakeFirestore();
+        seedEvent(fake);
+        seedGuest(fake, { side });
+        seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'groom' });
+        const db = (0, fakeFirestore_1.asFirestore)(fake);
+        await (0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } });
+        expect(fake.read('guests', GUEST_ID)).toBeUndefined();
+    });
+    test('a groom member cannot delete a bride guest', async () => {
+        const fake = new fakeFirestore_1.FakeFirestore();
+        seedEvent(fake);
+        seedGuest(fake, { side: 'bride' });
+        seedEventMember(fake, EVENT_ID, 'user1', { role: 'couple', side: 'groom' });
+        const db = (0, fakeFirestore_1.asFirestore)(fake);
+        await expect((0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
+            code: 'guest_side_not_allowed'
+        });
+        expect(fake.read('guests', GUEST_ID)).toBeDefined();
+    });
+    test('a family member cannot delete a guest', async () => {
         const fake = new fakeFirestore_1.FakeFirestore();
         seedEvent(fake);
         seedGuest(fake);
@@ -102,12 +141,46 @@ describe('handleDeleteGuest', () => {
         });
         expect(fake.read('guests', GUEST_ID)).toBeDefined();
     });
+    test('a staff member cannot delete a guest', async () => {
+        const fake = new fakeFirestore_1.FakeFirestore();
+        seedEvent(fake);
+        seedGuest(fake);
+        seedEventMember(fake, EVENT_ID, 'user1', { role: 'staff' });
+        const db = (0, fakeFirestore_1.asFirestore)(fake);
+        await expect((0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
+            code: 'event_role_not_allowed'
+        });
+        expect(fake.read('guests', GUEST_ID)).toBeDefined();
+    });
+    test('a viewer cannot delete a guest', async () => {
+        const fake = new fakeFirestore_1.FakeFirestore();
+        seedEvent(fake);
+        seedGuest(fake);
+        seedEventMember(fake, EVENT_ID, 'user1', { role: 'viewer' });
+        const db = (0, fakeFirestore_1.asFirestore)(fake);
+        await expect((0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
+            code: 'event_role_not_allowed'
+        });
+        expect(fake.read('guests', GUEST_ID)).toBeDefined();
+    });
     test("an owner of a different event cannot delete this event's guest", async () => {
         const fake = new fakeFirestore_1.FakeFirestore();
         seedEvent(fake, 'event1');
         seedEvent(fake, 'event2');
-        seedGuest(fake, 'event1');
+        seedGuest(fake, { eventId: 'event1' });
         seedEventMember(fake, 'event2', 'user1', { role: 'owner' });
+        const db = (0, fakeFirestore_1.asFirestore)(fake);
+        await expect((0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
+            code: 'event_access_denied'
+        });
+        expect(fake.read('guests', GUEST_ID)).toBeDefined();
+    });
+    test("a bride of a different event cannot delete this event's bride guest", async () => {
+        const fake = new fakeFirestore_1.FakeFirestore();
+        seedEvent(fake, 'event1');
+        seedEvent(fake, 'event2');
+        seedGuest(fake, { eventId: 'event1', side: 'bride' });
+        seedEventMember(fake, 'event2', 'user1', { role: 'couple', side: 'bride' });
         const db = (0, fakeFirestore_1.asFirestore)(fake);
         await expect((0, deleteGuest_1.handleDeleteGuest)(db, deleteInput, { auth: { uid: 'user1' } })).rejects.toMatchObject({
             code: 'event_access_denied'

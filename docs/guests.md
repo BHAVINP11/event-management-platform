@@ -2,11 +2,14 @@
 
 ## 1. Purpose
 
-Step 11 adds the platform's first real event module: a guest list.
+Step 11 added the platform's first real event module: a guest list. Step 12
+adds scoped access to it — a bride/groom collaborator sees and manages only
+their own side of the guest list, enforced server-side, not just hidden in
+the UI.
 
 A **Guest is an event attendee, not a platform User.** They need no account,
 login, or profile — just a name and whatever contact/relationship details the
-event's planner or owner chooses to record:
+event's planner, owner, bride, or groom chooses to record:
 
 ```
 Rajesh Patel
@@ -33,7 +36,9 @@ createdBy, createdAt, updatedAt
 in a way an `EventMember`'s role never does (an invited collaborator plays
 one role; a guest can simply be "family of both").
 
-No other domain model changed.
+No domain model changed in Step 12 either — scoping is authorization logic
+over the existing `EventMember.role`/`.side` and `Guest.side` fields, not a
+new field or collection.
 
 ## 3. Repository
 
@@ -52,125 +57,156 @@ Firestore rule) scope access, consistent with the rest of the app.
 
 `create`/`update`/`delete` exist on the interface and Firebase
 implementation for parity with the other repositories, but the client never
-calls them — see §4.
+calls them — see §4. `listByEventAndSide`, unused in Step 11, is now what a
+couple member's read is built from — see §5.
 
 ## 4. Trusted CRUD
 
 Three callable Cloud Functions, `functions/src/guests/{createGuest,
 updateGuest,deleteGuest}.ts`, are the only way a guest is ever written.
 Firestore rules deny all client writes to `guests` (see §7); reads go
-through the ordinary repository/rules path instead (any active event
-member, regardless of role — see §5).
+through the ordinary repository/rules path instead, scoped per §5.
 
 Every operation verifies, in this order:
 
 1. **Authenticated** — `context.auth` present, else `unauthenticated`.
 2. **Active EventMember** — the caller has an `eventMembers/{eventId}_{uid}`
-   document with `status: active` for the *relevant* event (see §6 for what
-   "relevant" means for update/delete).
-3. **Role** — `owner` or `planner`; anyone else gets `event_role_not_allowed`.
+   document with `status: active` for the *relevant* event (see §7 for what
+   "relevant" means for update/delete). Loaded by
+   `loadActiveEventMembership` (`functions/src/shared/eventAuthority.ts`),
+   which returns the caller's `role` and `side` — this one function is
+   reused by `createInvitation` too (which only needs role), so the two
+   features can't drift apart on what "an active membership for this event"
+   means.
+3. **Role and side** — `functions/src/guests/authorization.ts` decides,
+   given the membership's role/side and (for update) the guest's existing
+   and requested sides. See §5 for the exact rules and §6 for error codes.
 
-This authorization check (`verifyEventManagementAuthority`,
-`functions/src/shared/eventAuthority.ts`) is not new code written for
-guests — it's the exact same "is this caller an active owner/planner on
-this event" check `createInvitation` (Step 10) already needed, extracted
-into a shared helper so the two features can't drift apart. `createGuest`,
-`updateGuest`, and `deleteGuest` all call it; `createInvitation` was
-refactored to call it too, with no change in its behavior or error codes.
+## 5. Scoped access rules
 
-## 5. Who can do what (current step, not final)
-
-| Role | View guests | Add / edit / delete |
+| Role | View | Create / Update / Delete |
 | --- | --- | --- |
-| Owner | ✅ | ✅ |
-| Planner | ✅ | ✅ |
-| Couple | ✅ | ❌ |
-| Family | ✅ | ❌ |
-| Staff | ✅ | ❌ |
-| Viewer | ✅ | ❌ |
+| Owner | all guests | all guests, any side |
+| Planner | all guests | all guests, any side |
+| Couple, side=bride | bride + both | bride + both only |
+| Couple, side=groom | groom + both | groom + both only |
+| Family | all guests | — (view only) |
+| Staff | all guests | — (view only) |
+| Viewer | all guests | — (view only) |
 
-Viewing is granted by Firestore rules to **any active member, regardless of
-role** — the same "collaborative visibility" precedent Step 10 set for the
-People page. Only the Cloud Functions restrict *writing* to owner/planner.
-The client's `GuestService.listGuests().canManage` (backed by
-`AuthorizationService.canManageEventGuests`) only decides whether the UI
-offers Add/Edit/Delete; it is not consulted by the Cloud Functions, which
-independently re-derive the same owner/planner check from the stored
-membership document.
+**Family is intentionally not scoped by side in this step** — it views the
+full guest list, same as Staff/Viewer. See §10 for why, and for the future
+shape once Family scoping is designed.
 
-## 6. Validation and what the server controls
+The four functions `functions/src/guests/authorization.ts` defines (and
+`src/features/events/services/guestAuthorization.ts` mirrors on the client,
+for UI purposes only — see §8):
 
-`functions/src/guests/shared.ts` validates:
+- **`canViewGuest(membership, guestSide)`** — owner/planner always; a couple
+  member only if `canAccessGuestSide(membership.side, guestSide)`;
+  family/staff/viewer always (not scoped this step).
+- **`canCreateGuest(membership, requestedSide)`** — owner/planner any side; a
+  couple member only a side `canAccessGuestSide` allows; family/staff/viewer
+  never.
+- **`canUpdateGuest(membership, existingSide, requestedSide)`** —
+  owner/planner any change; a couple member only if **both** the guest's
+  current side and the requested new side are within their scope (see §5.1);
+  family/staff/viewer never.
+- **`canDeleteGuest(membership, guestSide)`** — same shape as create/view.
 
-- `name`: required, 1–200 characters.
-- `phone`: optional, ≤30 characters.
-- `email`: optional — reuses `validateContactEmail` from
-  `functions/src/validation.ts` rather than a second email regex.
-- `side`: required, one of `bride` / `groom` / `both`.
-- `relation`: optional, ≤100 characters.
-- `notes`: optional, ≤1000 characters.
-- `status`: optional, defaults to `pending`; if given, one of `pending` /
-  `invited` / `confirmed` / `declined`.
+And the one rule everything above is built from:
 
-The server — never the client — controls `id` (auto-generated Firestore doc
-ID), `eventId`, `createdBy`, `createdAt`, and `updatedAt`:
+```
+canAccessGuestSide(memberSide, guestSide):
+  memberSide == bride: guestSide in [bride, both]
+  memberSide == groom: guestSide in [groom, both]
+  otherwise: false
+```
 
-- **createGuest** takes `eventId` from the request, but only to *look up*
-  the caller's membership (§4) — the stored document's `eventId` is what
-  `createGuest` writes, and `createdBy` is always `context.auth.uid`.
-- **updateGuest** takes only `guestId` from the request. It loads the
-  *existing* document first and carries its `eventId`, `createdBy`, and
-  `createdAt` forward untouched, regardless of anything the client sends in
-  those fields — there is no code path where a client-supplied `eventId`
-  reaches storage during an update.
+### 5.1 Update: side changes are constrained at both ends
+
+A bride may change a bride-side guest to `both` (widening it to include the
+groom's side too) but not to `groom` (that would hand a guest she can see to
+a side she can't). Concretely: `canUpdateGuest` requires
+`canAccessGuestSide(bride, existingSide) && canAccessGuestSide(bride, requestedSide)`
+— the *existing* side must be hers to touch at all, and the *requested* side
+must be one she's allowed to set. `bride → groom` fails the second check;
+`bride → both` passes both. A groom member is the mirror image. Owner/planner
+skip both checks entirely.
+
+## 6. Errors
+
+New in Step 12: **`guest_side_not_allowed`** (→ `permission-denied`) — a
+couple member's role generally permits managing guests, just not this
+side. Reserved for that case specifically, so the client can tell "your role
+can't do this at all" (`event_role_not_allowed`, unchanged, still what
+family/staff/viewer get) apart from "your role can, but not for this guest"
+(`guest_side_not_allowed`). Both are produced by
+`functions/src/guests/authorization.ts`'s `denyGuestWrite`, which picks
+between them based on whether the membership's role is `couple`.
 
 ## 7. Event isolation
 
 **A member of Event A must never access guests belonging to Event B.**
 
-- **Reads:** the Firestore rule (`guests/{guestId}`) requires
-  `isActiveEventMember(resource.data.eventId)` — the *document's own*
-  `eventId`, not one the client asserts. A member of event A has no active
+- **Reads:** the Firestore rule requires `isActiveEventMember(resource.data.eventId)`
+  — the *document's own* `eventId`, not one the client asserts — before the
+  side-scoping check in §5 even runs. A member of event A has no active
   membership document for event B, so the rule fails for event B's guests
-  regardless of what the client's query asks for. Covered by
-  `tests/firestore.rules.test.ts` (`'a member of a different event cannot
-  read this event's guest'`).
+  regardless of what the client's query asks for.
 - **Writes (update/delete):** authorization is checked against the guest's
-  ***stored*** `eventId` (loaded from the document itself), never a
-  client-supplied one. An owner of event B calling `updateGuest`/
-  `deleteGuest` with event A's `guestId` is checked against event A's
-  membership requirement — which they don't have — and rejected with
-  `event_access_denied`. Covered by
-  `functions/src/__tests__/{updateGuest,deleteGuest}.test.ts`
-  (`"an owner of a different event cannot {update,delete} this event's
-  guest"`).
+  ***stored*** `eventId` and `side` (both loaded from the document itself),
+  never client-supplied values. An owner — or a bride — of event B calling
+  `updateGuest`/`deleteGuest` with event A's `guestId` is checked against
+  event A's membership requirement, which they don't have, and rejected
+  with `event_access_denied` (not `guest_side_not_allowed` — they fail the
+  membership check before side is ever considered). Covered by
+  `functions/src/__tests__/{createGuest,updateGuest,deleteGuest}.test.ts`
+  (`"an owner/bride of a different event cannot ... this event's guest"`).
 
 ## 8. Guests page
 
-`/events/:eventId/guests` (`GuestsPage`), reached from a new **Guests** item
-in the event workspace navigation (alongside **Overview** and **People**).
+`/events/:eventId/guests` (`GuestsPage`), reached from a **Guests** item in
+the event workspace navigation (alongside **Overview** and **People**).
 Uses the same access check as the workspace Overview and the People page
 before showing anything.
 
-- **Filter tabs** `[All] [Bride] [Groom]` and a **name/phone search** both
-  run client-side over the already-loaded guest list — no extra Firestore
-  reads per click, and it sidesteps a subtlety of filtering server-side: a
-  `where('side', '==', 'bride')` query would miss "both" guests, so a
-  same-shaped "server filter" would need two merged queries per tab anyway.
-  The full list is small enough per event that this stays simple, matching
-  the step's "do not over-engineer" instruction.
-- **Counts** — Total, Bride, Groom — computed from the full (unfiltered)
-  guest list; a guest with `side: both` contributes to both the Bride and
-  Groom counts as well as Total (`computeGuestCounts`,
-  `src/features/events/types/guests.ts`).
+- **The guest list itself is already scoped** by `GuestService.listGuests`
+  before it reaches the page — a bride's `state.data.guests` contains only
+  bride/both guests to begin with (see §5, §11). The `[All] [Bride] [Groom]`
+  filter tabs and name/phone search still run client-side, but only ever
+  narrow *within* whatever the caller can already see — they are not what
+  keeps a bride from seeing groom-only guests; the repository read pattern
+  and Firestore rule are.
+- **Counts** — Total, Bride, Groom — computed by the unchanged
+  `computeGuestCounts` (`src/features/events/types/guests.ts`), but now fed
+  the *scoped* list. For a bride, "Groom" therefore reflects only the
+  both-side guests she can already see, never the real count of groom-only
+  guests (see §8.1 for why that's correct, not a bug).
 - **Add/Edit** is one shared `GuestForm`, shown inline (toggled, not a
   separate route) — Name, Phone, Email, Side, Relation, Notes, Status. Only
-  rendered when `canManage` is true; a modified client that renders it
-  anyway still can't succeed, since `createGuest`/`updateGuest` re-check
-  authority server-side.
+  rendered when `canManage` is true (owner/planner/couple — see §5). The
+  **Side** field is further restricted to `manageableSides`
+  (`GuestListData`, computed by `manageableGuestSides` in
+  `guestAuthorization.ts`): all three for owner/planner, `[bride, both]` for
+  a bride, `[groom, both]` for a groom. A modified client that renders the
+  form for a disallowed side anyway still can't succeed —
+  `createGuest`/`updateGuest` re-check server-side regardless of what the
+  form offered.
 - **Delete** asks for confirmation (`window.confirm`) before calling
   `deleteGuest` — no custom modal component introduced for one destructive
   action.
+
+### 8.1 Why a bride's "Groom" count isn't the real groom count
+
+This is intentional, not a leak. The bride's visible guest list never
+contains groom-only guests at all (§5), so `computeGuestCounts` computing
+"groom" from that list can only count the both-side guests already visible
+to her individually — it cannot and does not reveal how many groom-only
+guests exist. Revealing that number (even as a bare count, with no names)
+would tell her something about the guest list she has no access to; not
+showing it, or showing a number derived only from what she can already see,
+does not.
 
 ## 9. UI states
 
@@ -179,52 +215,47 @@ pattern as People/Overview), error (`ErrorState`, friendly message + Retry —
 `GuestError`/`EventLoadError` carry only a friendly message, never a
 Firestore code or stack trace), and the empty state:
 
-- **No guests on the event at all:** "No guests added yet." (plus
-  `[+ Add Guest]` for owner/planner, per spec).
+- **No guests visible to this user at all:** "No guests added yet." (plus
+  `[+ Add Guest]` for owner/planner/couple). Note this is about what the
+  *caller* can see — a bride event with only groom-only guests recorded
+  would show this to the bride, correctly, since she has nothing to see.
 - **Guests exist, but the current filter/search matches none:** "No guests
   match your search." — distinct copy so a planner searching for a
   misspelled name isn't told the guest list is empty.
 
-## 10. Future permission foundation (not implemented here)
+## 10. Why Family is intentionally not scoped yet
 
-The step is explicit that granular per-side permissions are a **future**
-step, not this one. Nothing below is implemented — this section documents
-how the current code is shaped so that step doesn't require a rewrite:
+Family is spec'd, for this step, as view-only with **full** visibility —
+deliberately not narrowed by side. Doing so would require deciding a real
+product question this step is explicitly not answering: does a Family
+member see their own side, both, or something else — and how would a
+`EventMember` even record which side a Family member belongs to (bride/groom
+families are not currently distinguished the way a couple member's own
+`side` field distinguishes bride from groom)? Guessing at an answer now
+would be exactly the kind of premature scope decision the project's steps
+have consistently deferred until a dedicated step designs it properly.
 
-- **`Guest.side`** already exists and is validated today, expressly so a
-  future permission layer can filter by it.
-- **`EventMember.side`** already exists (Step 10, `EventMemberSide`) for
-  couple/family members. A future guest-visibility rule for a Bride/Groom
-  member would compare their *own* `EventMember.side` against
-  `Guest.side` — both fields already there, no schema change needed.
-- **The intended future rule shape**, to implement later (not now):
-  - Planner (and Owner) → all guests, as today.
-  - Bride → guests where `side` is `bride` or `both`.
-  - Groom → guests where `side` is `groom` or `both`.
-  - Family → some still-to-be-designed limited slice (likely also
-    side-scoped, possibly narrower).
-  - Everyone else (Staff, Viewer) → unspecified; deliberately not decided
-    yet.
-- **Where this would slot in:** `GuestService.listGuests` already isolates
-  "which guests may this caller see" from the repository read — extending
-  it to filter `guests` by the caller's own `EventMember.side` (instead of
-  returning every guest to every active member, as it does today) touches
-  exactly one method, not the repository, the Cloud Functions, or the
-  Firestore rule's `isActiveEventMember` check. The Cloud Functions'
-  `verifyEventManagementAuthority` (write-side) is similarly a single choke
-  point to extend with a side comparison, should Family ever get scoped
-  *write* access to their own side.
-- **What this step deliberately does not do:** no permission matrix, no
-  `permissions` field on `EventMember` or `Guest`, no per-guest ACL. Adding
-  any of those now, ahead of the design step that decides Family's actual
-  scope, would be exactly the kind of premature abstraction the project's
-  steps have consistently avoided (see `docs/events.md` §12 and
-  `docs/invitations.md` §12 for the same reasoning applied to event
-  creation and invitations).
+What Step 12 *does* leave in place for that future step:
+
+- `canViewGuest` in `functions/src/guests/authorization.ts` already has a
+  named branch for non-owner/planner/couple roles (currently `return true`
+  unconditionally) — narrowing Family specifically is a one-line change to
+  that branch, not a redesign.
+- `GuestService.loadScopedGuests` on the client is similarly a single
+  `if (membership.role !== EventRole.Couple)` check away from adding a
+  Family-specific branch, once there's a `side`-like field to key it off.
+- The Firestore rule's `canAccessGuestForEvent` allow-list
+  (`["owner", "planner", "family", "staff", "viewer"]`) already separates
+  Family out by name; scoping it later means moving `"family"` out of that
+  list into its own clause, not rewriting the rule.
+
+No permission matrix, `permissions` field, or per-guest ACL was added to
+reach this — see `docs/events.md` §12 and `docs/invitations.md` §12 for the
+same reasoning applied elsewhere in this app.
 
 ## 11. Architecture
 
-Unchanged shape from Steps 8–10:
+Unchanged shape from Steps 8–11:
 
 ```
 Guests page   → GuestService (read)  → Repository Interfaces      → Firebase Repositories → Firestore
@@ -239,25 +270,34 @@ features. React components never import Firestore or a Firebase repository;
 `useGuestList` (hook) and `GuestForm`/`GuestList` (components) only ever
 talk to `GuestService`.
 
+The client-side `guestAuthorization.ts` is consulted only to decide what the
+UI *offers* (which reads to issue, whether to show Add/Edit/Delete, which
+Side options a form lists) — never the actual authority. The Cloud Functions
+and Firestore rule re-derive the same scope independently, from the stored
+`EventMember` document, every time.
+
 ## Structure
 
 ```
-functions/src/shared/eventAuthority.ts   verifyEventManagementAuthority (shared with invitations)
+functions/src/shared/eventAuthority.ts   loadActiveEventMembership (role+side),
+                                          verifyEventManagementAuthority (owner/planner only, used by invitations)
 functions/src/guests/
-  shared.ts          field validation, Guest document builder
-  createGuest.ts      authority check, create
-  updateGuest.ts      load existing, authority check on its eventId, update
-  deleteGuest.ts      load existing, authority check on its eventId, delete
+  authorization.ts    canView/Create/Update/DeleteGuest, canAccessGuestSide, assertCan* (Step 12)
+  shared.ts           field validation, Guest document builder
+  createGuest.ts      loads membership, assertCanCreateGuest, create
+  updateGuest.ts      loads existing + membership, assertCanUpdateGuest(existing.side, requested.side), update
+  deleteGuest.ts      loads existing + membership, assertCanDeleteGuest(existing.side), delete
 
 src/types/guest.ts                                 Guest, GuestSide, GuestStatus
 src/repositories/interfaces/guestRepository.ts
 src/services/firebase/repositories/firebaseGuestRepository.ts
 
 src/features/events/
-  types/guests.ts                    GuestListData, GuestFormInput, computeGuestCounts
-  services/guestService.ts           read (repository) + write (Cloud Functions)
+  types/guests.ts                    GuestListData (+ manageableSides), GuestFormInput, computeGuestCounts
+  services/guestAuthorization.ts     canAccessGuestSide, canManageGuests, manageableGuestSides (Step 12)
+  services/guestService.ts           read (repository, scoped) + write (Cloud Functions)
   hooks/useGuestList.ts
   components/GuestList.tsx
-  components/GuestForm.tsx
+  components/GuestForm.tsx           Side options limited to allowedSides
   pages/GuestsPage.tsx                /events/:eventId/guests
 ```
