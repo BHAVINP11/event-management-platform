@@ -7,6 +7,8 @@ import { UserRepository } from '@/repositories/interfaces/userRepository';
 import { GuestRepository } from '@/repositories/interfaces/guestRepository';
 import { FunctionRepository } from '@/repositories/interfaces/functionRepository';
 import { ExpenseRepository } from '@/repositories/interfaces/expenseRepository';
+import { VendorRepository } from '@/repositories/interfaces/vendorRepository';
+import { TaskRepository } from '@/repositories/interfaces/taskRepository';
 import { RepositoryInfrastructureError } from '@/repositories/errors';
 import { getEventMembershipId, getOrganizationMembershipId } from '@/repositories/membershipIds';
 import { Organization } from '@/types/organization';
@@ -16,6 +18,8 @@ import { User } from '@/types/user';
 import { Guest, GuestSide, GuestStatus } from '@/types/guest';
 import { EventFunction, EventFunctionStatus } from '@/types/eventFunction';
 import { Expense, ExpenseCategory, PaymentStatus } from '@/types/expense';
+import { Vendor, VendorCategory, VendorStatus } from '@/types/vendor';
+import { Task, TaskPriority, TaskStatus } from '@/types/task';
 import {
   EventMember,
   EventRole,
@@ -131,6 +135,26 @@ export const buildExpense = (overrides: Partial<Expense> & { id: string; eventId
   amount: 200000,
   paymentStatus: PaymentStatus.Unpaid,
   paidAmount: 0,
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildVendor = (overrides: Partial<Vendor> & { id: string; eventId: string }): Vendor => ({
+  name: 'Royal Caterers',
+  category: VendorCategory.Catering,
+  status: VendorStatus.Enquiry,
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildTask = (overrides: Partial<Task> & { id: string; eventId: string }): Task => ({
+  title: 'Book the venue',
+  status: TaskStatus.Todo,
+  priority: TaskPriority.Medium,
   createdBy: 'owner1',
   createdAt: now,
   updatedAt: now,
@@ -330,6 +354,48 @@ export class FakeExpenseRepository implements ExpenseRepository {
       throw new RepositoryInfrastructureError('Failed to list expenses.');
     }
     return this.expenses.filter((e) => e.eventId === eventId);
+  }
+
+  create = unsupported;
+  update = unsupported;
+  delete = unsupported;
+}
+
+export class FakeVendorRepository implements VendorRepository {
+  failing = false;
+
+  constructor(private readonly vendors: readonly Vendor[] = []) {}
+
+  async getById(vendorId: string): Promise<Vendor | null> {
+    return this.vendors.find((v) => v.id === vendorId) ?? null;
+  }
+
+  async listByEvent(eventId: string): Promise<Vendor[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list vendors.');
+    }
+    return this.vendors.filter((v) => v.eventId === eventId);
+  }
+
+  create = unsupported;
+  update = unsupported;
+  delete = unsupported;
+}
+
+export class FakeTaskRepository implements TaskRepository {
+  failing = false;
+
+  constructor(private readonly tasks: readonly Task[] = []) {}
+
+  async getById(taskId: string): Promise<Task | null> {
+    return this.tasks.find((t) => t.id === taskId) ?? null;
+  }
+
+  async listByEvent(eventId: string): Promise<Task[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list tasks.');
+    }
+    return this.tasks.filter((t) => t.eventId === eventId);
   }
 
   create = unsupported;

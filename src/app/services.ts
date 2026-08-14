@@ -7,6 +7,8 @@ import { FirebaseUserRepository } from '@/services/firebase/repositories/firebas
 import { FirebaseGuestRepository } from '@/services/firebase/repositories/firebaseGuestRepository';
 import { FirebaseFunctionRepository } from '@/services/firebase/repositories/firebaseFunctionRepository';
 import { FirebaseExpenseRepository } from '@/services/firebase/repositories/firebaseExpenseRepository';
+import { FirebaseVendorRepository } from '@/services/firebase/repositories/firebaseVendorRepository';
+import { FirebaseTaskRepository } from '@/services/firebase/repositories/firebaseTaskRepository';
 import { AuthorizationService } from '@/features/auth/services/authorizationService';
 import { DashboardService } from '@/features/dashboard/services/dashboardService';
 import { EventAccessService } from '@/features/events/services/eventAccessService';
@@ -16,6 +18,8 @@ import { InvitationService } from '@/features/events/services/invitationService'
 import { GuestService } from '@/features/events/services/guestService';
 import { FunctionService } from '@/features/events/services/functionService';
 import { ExpenseService } from '@/features/events/services/expenseService';
+import { VendorService } from '@/features/events/services/vendorService';
+import { TaskService } from '@/features/events/services/taskService';
 
 /**
  * Composition root.
@@ -34,6 +38,8 @@ const userRepository = new FirebaseUserRepository();
 const guestRepository = new FirebaseGuestRepository();
 const functionRepository = new FirebaseFunctionRepository();
 const expenseRepository = new FirebaseExpenseRepository();
+const vendorRepository = new FirebaseVendorRepository();
+const taskRepository = new FirebaseTaskRepository();
 
 export const authorizationService = new AuthorizationService(
   organizationMemberRepository,
@@ -69,3 +75,7 @@ export const guestService = new GuestService(authorizationService, eventReposito
 export const functionService = new FunctionService(authorizationService, eventRepository, functionRepository);
 
 export const expenseService = new ExpenseService(authorizationService, eventRepository, expenseRepository);
+
+export const vendorService = new VendorService(authorizationService, eventRepository, vendorRepository);
+
+export const taskService = new TaskService(authorizationService, eventRepository, taskRepository, eventPeopleService);

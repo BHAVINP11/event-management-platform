@@ -54,7 +54,10 @@ const KNOWN_APP_CODES: Record<string, FirebaseCallableErrorCode> = {
   guest_not_found: 'not-found',
   guest_side_not_allowed: 'permission-denied',
   function_not_found: 'not-found',
-  expense_not_found: 'not-found'
+  expense_not_found: 'not-found',
+  vendor_not_found: 'not-found',
+  task_not_found: 'not-found',
+  task_assignment_not_allowed: 'permission-denied'
 };
 
 function firebaseCodeFor(appCode: string): FirebaseCallableErrorCode {

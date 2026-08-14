@@ -10,6 +10,8 @@ import { EventPeoplePage } from '@/features/events/pages/EventPeoplePage';
 import { GuestsPage } from '@/features/events/pages/GuestsPage';
 import { FunctionsPage } from '@/features/events/pages/FunctionsPage';
 import { ExpensesPage } from '@/features/events/pages/ExpensesPage';
+import { VendorsPage } from '@/features/events/pages/VendorsPage';
+import { TasksPage } from '@/features/events/pages/TasksPage';
 import { InvitationAcceptPage } from '@/features/events/pages/InvitationAcceptPage';
 import { NotFoundPage } from '@/pages/public/NotFoundPage';
 import { OnboardingTypePage } from '@/pages/onboarding/OnboardingTypePage';
@@ -37,6 +39,8 @@ export function AppRouter(): JSX.Element {
         <Route path="/events/:eventId/guests" element={<ProtectedRoute><GuestsPage /></ProtectedRoute>} />
         <Route path="/events/:eventId/functions" element={<ProtectedRoute><FunctionsPage /></ProtectedRoute>} />
         <Route path="/events/:eventId/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
+        <Route path="/events/:eventId/vendors" element={<ProtectedRoute><VendorsPage /></ProtectedRoute>} />
+        <Route path="/events/:eventId/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
         {/* Not wrapped in ProtectedRoute: an unauthenticated visitor must be
             sent through login/signup with a way back to this exact URL,
             which the page itself handles (see InvitationAcceptPage). */}

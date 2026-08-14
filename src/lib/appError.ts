@@ -106,3 +106,35 @@ export class ExpenseError extends AppError {
     this.code = code;
   }
 }
+
+/**
+ * Raised when loading or writing a vendor fails, whether from invalid
+ * input, denied event access/role, a missing vendor, or an infrastructure
+ * failure. `code` carries the Cloud Function's error code where one
+ * applies.
+ */
+export class VendorError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'VendorError';
+    this.code = code;
+  }
+}
+
+/**
+ * Raised when loading or writing a task fails, whether from invalid
+ * input, denied event access/role, a missing task, an invalid assignee,
+ * or an infrastructure failure. `code` carries the Cloud Function's error
+ * code where one applies.
+ */
+export class TaskError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'TaskError';
+    this.code = code;
+  }
+}

@@ -170,5 +170,33 @@ service cloud.firestore {
 
       allow write: if false;
     }
+
+    // Vendor rules
+    // vendors/{vendorId} — any active member of the event may view every
+    // vendor for that event; there is no side-scoping for this domain
+    // (matching functions/ceremonies/expenses). Only the trusted
+    // createVendor/updateVendor/deleteVendor Cloud Functions may write,
+    // after independently re-verifying the caller has owner/planner
+    // authority. A flat collection carrying an eventId field, like
+    // guests/functions/expenses.
+    match /vendors/{vendorId} {
+      allow read: if isActiveEventMember(resource.data.eventId);
+
+      allow write: if false;
+    }
+
+    // Task rules
+    // tasks/{taskId} — any active member of the event may view every task
+    // for that event, regardless of role (owner/planner/staff/couple/
+    // family/viewer all read the same list; who may *write* is what
+    // differs — see functions/src/tasks/authorization.ts). Only the
+    // trusted createTask/updateTask/deleteTask Cloud Functions may write.
+    // A flat collection carrying an eventId field, like guests/functions/
+    // expenses/vendors.
+    match /tasks/{taskId} {
+      allow read: if isActiveEventMember(resource.data.eventId);
+
+      allow write: if false;
+    }
   }
 }

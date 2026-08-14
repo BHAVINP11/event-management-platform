@@ -88,6 +88,28 @@ const expense = (eventId: string, title = 'Venue Booking') => ({
   updatedAt: now
 });
 
+const vendor = (eventId: string, name = 'Royal Caterers') => ({
+  id: 'vendor1',
+  eventId,
+  name,
+  category: 'catering',
+  status: 'enquiry',
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now
+});
+
+const task = (eventId: string, title = 'Book the venue') => ({
+  id: 'task1',
+  eventId,
+  title,
+  status: 'todo',
+  priority: 'medium',
+  createdBy: 'owner1',
+  createdAt: now,
+  updatedAt: now
+});
+
 const invitation = (eventId: string, invitedEmail: string, status = 'pending') => ({
   id: 'invitation1',
   eventId,
@@ -819,6 +841,204 @@ describe('Firestore Security Rules', () => {
 
       await expect(
         testEnv.authenticatedContext('user1').firestore().collection('events').doc('event1').update({ budgetAmount: 999999 })
+      ).rejects.toThrow();
+    });
+  });
+
+  // Step 15: vendors have no side-scoping — any active event member may
+  // view every vendor for that event, regardless of role.
+  describe('Vendors', () => {
+    test('an active event member can read a vendor for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('vendors').doc('vendor1').get()).resolves.toBeDefined();
+    });
+
+    test('an active event member can list every vendor for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1', 'Royal Caterers'));
+        await adminDb.firestore().collection('vendors').doc('vendor2').set(vendor('event1', 'Dream Decor'));
+        await adminDb.firestore().collection('vendors').doc('vendor3').set(vendor('event2', "Someone Else's Vendor"));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('vendors').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(2);
+    });
+
+    test.each(['owner', 'planner', 'couple', 'family', 'staff', 'viewer'])(
+      'a %s member can read vendors (no side-scoping for this domain)',
+      async (role) => {
+        await seed(async (adminDb) => {
+          await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', role));
+          await adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1'));
+        });
+
+        await expect(testEnv.authenticatedContext('user1').firestore().collection('vendors').doc('vendor1').get()).resolves.toBeDefined();
+      }
+    );
+
+    test('an unauthenticated user cannot read a vendor', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1')));
+
+      await expect(testEnv.unauthenticatedContext().firestore().collection('vendors').doc('vendor1').get()).rejects.toThrow();
+    });
+
+    test('an inactive event member cannot read that event\'s vendors', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'inactive'));
+        await adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('vendors').doc('vendor1').get()).rejects.toThrow();
+    });
+
+    test('a member of a different event cannot read this event\'s vendor (event isolation)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event2', 'user1')).set(eventMember('event2', 'user1', 'active'));
+        await adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('vendors').doc('vendor1').get()).rejects.toThrow();
+    });
+
+    test('a non-member cannot list vendors for an event they do not belong to', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1')));
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('vendors').where('eventId', '==', 'event1').get()).rejects.toThrow();
+    });
+
+    test('client cannot create a vendor directly', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active')));
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('vendors').doc('vendor1').set(vendor('event1'))
+      ).rejects.toThrow();
+    });
+
+    test('client cannot update a vendor directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('vendors').doc('vendor1').update({ status: 'confirmed' })
+      ).rejects.toThrow();
+    });
+
+    test('client cannot delete a vendor directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('vendors').doc('vendor1').set(vendor('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('vendors').doc('vendor1').delete()
+      ).rejects.toThrow();
+    });
+  });
+
+  // Step 15: tasks have no side-scoping for reads — any active event
+  // member may view every task for that event. Who may *write* differs by
+  // role (owner/planner any task, staff only their own assigned task),
+  // but that authorization lives in the Cloud Functions
+  // (functions/src/tasks/authorization.ts), not the Firestore rule — the
+  // rule denies all client writes outright, same as every other domain.
+  describe('Tasks', () => {
+    test('an active event member can read a task for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('tasks').doc('task1').set(task('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('tasks').doc('task1').get()).resolves.toBeDefined();
+    });
+
+    test('an active event member can list every task for their event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('tasks').doc('task1').set(task('event1', 'Book the venue'));
+        await adminDb.firestore().collection('tasks').doc('task2').set(task('event1', 'Send invitations'));
+        await adminDb.firestore().collection('tasks').doc('task3').set(task('event2', "Someone Else's Task"));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('tasks').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(2);
+    });
+
+    test.each(['owner', 'planner', 'couple', 'family', 'staff', 'viewer'])(
+      'a %s member can read tasks (no side-scoping for reads)',
+      async (role) => {
+        await seed(async (adminDb) => {
+          await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', role));
+          await adminDb.firestore().collection('tasks').doc('task1').set(task('event1'));
+        });
+
+        await expect(testEnv.authenticatedContext('user1').firestore().collection('tasks').doc('task1').get()).resolves.toBeDefined();
+      }
+    );
+
+    test('an unauthenticated user cannot read a task', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('tasks').doc('task1').set(task('event1')));
+
+      await expect(testEnv.unauthenticatedContext().firestore().collection('tasks').doc('task1').get()).rejects.toThrow();
+    });
+
+    test('an inactive event member cannot read that event\'s tasks', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'inactive'));
+        await adminDb.firestore().collection('tasks').doc('task1').set(task('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('tasks').doc('task1').get()).rejects.toThrow();
+    });
+
+    test('a member of a different event cannot read this event\'s task (event isolation)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event2', 'user1')).set(eventMember('event2', 'user1', 'active'));
+        await adminDb.firestore().collection('tasks').doc('task1').set(task('event1'));
+      });
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('tasks').doc('task1').get()).rejects.toThrow();
+    });
+
+    test('a non-member cannot list tasks for an event they do not belong to', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('tasks').doc('task1').set(task('event1')));
+
+      await expect(testEnv.authenticatedContext('user1').firestore().collection('tasks').where('eventId', '==', 'event1').get()).rejects.toThrow();
+    });
+
+    test('client cannot create a task directly', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active')));
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('tasks').doc('task1').set(task('event1'))
+      ).rejects.toThrow();
+    });
+
+    test('client cannot update a task directly, e.g. to mark it complete themselves', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active', 'staff'));
+        await adminDb.firestore().collection('tasks').doc('task1').set({ ...task('event1'), assignedTo: 'user1' });
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('tasks').doc('task1').update({ status: 'completed' })
+      ).rejects.toThrow();
+    });
+
+    test('client cannot delete a task directly', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('tasks').doc('task1').set(task('event1'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('tasks').doc('task1').delete()
       ).rejects.toThrow();
     });
   });

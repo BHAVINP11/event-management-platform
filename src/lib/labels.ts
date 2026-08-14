@@ -4,6 +4,8 @@ import { InvitationStatus } from '@/types/invitation';
 import { GuestSide, GuestStatus } from '@/types/guest';
 import { EventFunctionStatus } from '@/types/eventFunction';
 import { ExpenseCategory, PaymentStatus } from '@/types/expense';
+import { VendorCategory, VendorStatus } from '@/types/vendor';
+import { TaskStatus, TaskPriority } from '@/types/task';
 
 /** Human-readable labels for the domain enums surfaced in the UI. */
 
@@ -97,6 +99,41 @@ const paymentStatusLabels: Record<PaymentStatus, string> = {
   [PaymentStatus.Paid]: 'Paid'
 };
 
+const vendorCategoryLabels: Record<VendorCategory, string> = {
+  [VendorCategory.Venue]: 'Venue',
+  [VendorCategory.Catering]: 'Catering',
+  [VendorCategory.Decoration]: 'Decoration',
+  [VendorCategory.Photography]: 'Photography',
+  [VendorCategory.Videography]: 'Videography',
+  [VendorCategory.Entertainment]: 'Entertainment',
+  [VendorCategory.Transportation]: 'Transportation',
+  [VendorCategory.Accommodation]: 'Accommodation',
+  [VendorCategory.Jewellery]: 'Jewellery',
+  [VendorCategory.Makeup]: 'Makeup',
+  [VendorCategory.Invitation]: 'Invitation',
+  [VendorCategory.Other]: 'Other'
+};
+
+const vendorStatusLabels: Record<VendorStatus, string> = {
+  [VendorStatus.Enquiry]: 'Enquiry',
+  [VendorStatus.Shortlisted]: 'Shortlisted',
+  [VendorStatus.Confirmed]: 'Confirmed',
+  [VendorStatus.Cancelled]: 'Cancelled'
+};
+
+const taskStatusLabels: Record<TaskStatus, string> = {
+  [TaskStatus.Todo]: 'To Do',
+  [TaskStatus.InProgress]: 'In Progress',
+  [TaskStatus.Completed]: 'Completed',
+  [TaskStatus.Cancelled]: 'Cancelled'
+};
+
+const taskPriorityLabels: Record<TaskPriority, string> = {
+  [TaskPriority.Low]: 'Low',
+  [TaskPriority.Medium]: 'Medium',
+  [TaskPriority.High]: 'High'
+};
+
 export const eventTypeLabel = (type: EventType): string => eventTypeLabels[type];
 export const eventStatusLabel = (status: EventStatus): string => eventStatusLabels[status];
 export const eventRoleLabel = (role: EventRole): string => eventRoleLabels[role];
@@ -110,3 +147,7 @@ export const guestStatusLabel = (status: GuestStatus): string => guestStatusLabe
 export const eventFunctionStatusLabel = (status: EventFunctionStatus): string => eventFunctionStatusLabels[status];
 export const expenseCategoryLabel = (category: ExpenseCategory): string => expenseCategoryLabels[category];
 export const paymentStatusLabel = (status: PaymentStatus): string => paymentStatusLabels[status];
+export const vendorCategoryLabel = (category: VendorCategory): string => vendorCategoryLabels[category];
+export const vendorStatusLabel = (status: VendorStatus): string => vendorStatusLabels[status];
+export const taskStatusLabel = (status: TaskStatus): string => taskStatusLabels[status];
+export const taskPriorityLabel = (priority: TaskPriority): string => taskPriorityLabels[priority];

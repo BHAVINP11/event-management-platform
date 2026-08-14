@@ -19,6 +19,12 @@ import { handleCreateExpense } from './expenses/createExpense';
 import { handleUpdateExpense } from './expenses/updateExpense';
 import { handleDeleteExpense } from './expenses/deleteExpense';
 import { handleUpdateEventBudget } from './events/updateEventBudget';
+import { handleCreateVendor } from './vendors/createVendor';
+import { handleUpdateVendor } from './vendors/updateVendor';
+import { handleDeleteVendor } from './vendors/deleteVendor';
+import { handleCreateTask } from './tasks/createTask';
+import { handleUpdateTask } from './tasks/updateTask';
+import { handleDeleteTask } from './tasks/deleteTask';
 import { ValidationError } from './validation';
 import { mapErrorToCallableResponse } from './errorMapping';
 
@@ -645,6 +651,221 @@ export const onDeleteExpense = functions.https.onCall(async (data, context) => {
 export const onUpdateEventBudget = functions.https.onCall(async (data, context) => {
   try {
     return await handleUpdateEventBudget(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: createVendor
+ *
+ * Adds a vendor to an event. The caller must have an active EventMember
+ * with role owner or planner. `id`, `eventId` (from the request),
+ * `createdBy`, and the timestamps are never trusted from the client
+ * beyond the requested `eventId`, which is independently verified.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   name: string,
+ *   category: string,
+ *   phone?: string,
+ *   email?: string,
+ *   notes?: string,
+ *   status?: string ('enquiry' | 'shortlisted' | 'confirmed' | 'cancelled', default 'enquiry')
+ * }
+ *
+ * Output:
+ * {
+ *   vendorId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage vendors
+ * - internal_error: Server error
+ */
+export const onCreateVendor = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleCreateVendor(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateVendor
+ *
+ * Edits a vendor's fields. Authority is verified against the vendor's
+ * *stored* eventId, never one the client could supply, so a client cannot
+ * retarget an edit at a different event's vendor. `id`, `eventId`,
+ * `createdBy`, and `createdAt` are carried over from the existing
+ * document.
+ *
+ * Input: same shape as createVendor, plus `vendorId: string` in place of `eventId`.
+ *
+ * Output:
+ * {
+ *   vendorId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - vendor_not_found: Vendor does not exist
+ * - event_access_denied: Caller has no active membership in the vendor's event
+ * - event_role_not_allowed: Caller's role cannot manage vendors
+ * - internal_error: Server error
+ */
+export const onUpdateVendor = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateVendor(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: deleteVendor
+ *
+ * Removes a vendor. Authority is verified against the vendor's *stored*
+ * eventId, exactly like updateVendor.
+ *
+ * Input:
+ * {
+ *   vendorId: string
+ * }
+ *
+ * Output:
+ * {
+ *   vendorId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_vendor_id: Input validation error
+ * - vendor_not_found: Vendor does not exist
+ * - event_access_denied: Caller has no active membership in the vendor's event
+ * - event_role_not_allowed: Caller's role cannot manage vendors
+ * - internal_error: Server error
+ */
+export const onDeleteVendor = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleDeleteVendor(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: createTask
+ *
+ * Adds a task to an event. The caller must have an active EventMember
+ * with role owner or planner (see `functions/src/tasks/authorization.ts`
+ * — staff may update but never create tasks). If `assignedTo` is
+ * supplied, it must be an active EventMember of the same event — never
+ * trusted as a bare user ID. `id`, `eventId` (from the request),
+ * `createdBy`, and the timestamps are never trusted from the client
+ * beyond the requested `eventId`, which is independently verified.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   title: string,
+ *   description?: string,
+ *   dueDate?: string,
+ *   status?: string ('todo' | 'in_progress' | 'completed' | 'cancelled', default 'todo'),
+ *   priority?: string ('low' | 'medium' | 'high', default 'medium'),
+ *   assignedTo?: string (an EventMember's user ID, not a Guest ID)
+ * }
+ *
+ * Output:
+ * {
+ *   taskId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_assigned_to)
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot create tasks
+ * - internal_error: Server error
+ */
+export const onCreateTask = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleCreateTask(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateTask
+ *
+ * Edits a task's fields. Authority is verified against the task's
+ * *stored* eventId and *stored* assignedTo — owner/planner may update any
+ * task; staff only a task currently assigned to themselves (see
+ * `functions/src/tasks/authorization.ts`). If `assignedTo` is supplied, it
+ * must be an active EventMember of the same event. `id`, `eventId`,
+ * `createdBy`, and `createdAt` are carried over from the existing
+ * document.
+ *
+ * Input: same shape as createTask, plus `taskId: string` in place of `eventId`.
+ *
+ * Output:
+ * {
+ *   taskId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_assigned_to)
+ * - task_not_found: Task does not exist
+ * - event_access_denied: Caller has no active membership in the task's event
+ * - event_role_not_allowed: Caller's role cannot update tasks at all
+ * - task_assignment_not_allowed: Staff caller, but this task isn't assigned to them
+ * - internal_error: Server error
+ */
+export const onUpdateTask = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateTask(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: deleteTask
+ *
+ * Removes a task. Authority is verified against the task's *stored*
+ * eventId — owner/planner only, never staff (even for their own assigned
+ * task).
+ *
+ * Input:
+ * {
+ *   taskId: string
+ * }
+ *
+ * Output:
+ * {
+ *   taskId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_task_id: Input validation error
+ * - task_not_found: Task does not exist
+ * - event_access_denied: Caller has no active membership in the task's event
+ * - event_role_not_allowed: Caller's role cannot delete tasks
+ * - internal_error: Server error
+ */
+export const onDeleteTask = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleDeleteTask(db, data, context);
   } catch (error) {
     throw toHttpsError(error);
   }
