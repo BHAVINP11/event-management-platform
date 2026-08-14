@@ -34,8 +34,19 @@ const friendlyMessages: Record<string, string> = {
   internal_error: "We couldn't create your event right now."
 };
 
+/**
+ * Cloud Functions can only throw a small fixed set of codes
+ * (`functions/invalid-argument`, `functions/permission-denied`, ...) — the
+ * application's own code (`invalid_name`, `organization_role_not_allowed`,
+ * ...) travels separately in `error.details.appCode` (see
+ * `functions/src/errorMapping.ts`). That's the code this service keys its
+ * messaging off of; the standard Firebase code is only a fallback for the
+ * case details is missing for some reason.
+ */
 const toEventCreationError = (error: unknown): EventCreationError => {
-  const code = (error as { code?: string } | undefined)?.code ?? 'internal_error';
+  const details = (error as { details?: { appCode?: unknown } } | undefined)?.details;
+  const appCode = typeof details?.appCode === 'string' ? details.appCode : undefined;
+  const code = appCode ?? (error as { code?: string } | undefined)?.code ?? 'internal_error';
   return new EventCreationError(code, friendlyMessages[code] ?? friendlyMessages.internal_error);
 };
 

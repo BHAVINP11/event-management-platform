@@ -5,7 +5,7 @@ exports.verifyOrganizationEventCreationAccess = verifyOrganizationEventCreationA
 exports.createOrganizationEvent = createOrganizationEvent;
 exports.handleCreateOrganizationEvent = handleCreateOrganizationEvent;
 const validation_1 = require("../validation");
-const createOrganization_1 = require("../onboarding/createOrganization");
+const membershipIds_1 = require("../shared/membershipIds");
 const shared_1 = require("./shared");
 /**
  * Organization roles allowed to create events on behalf of an organization.
@@ -45,7 +45,7 @@ async function verifyOrganizationEventCreationAccess(db, organizationId, userId)
     if (!organizationSnapshot.exists) {
         throw new validation_1.ValidationError('organization_not_found', 'Organization not found.');
     }
-    const membershipId = (0, createOrganization_1.getOrganizationMembershipId)(organizationId, userId);
+    const membershipId = (0, membershipIds_1.getOrganizationMembershipId)(organizationId, userId);
     const membershipSnapshot = await db.collection('organizationMembers').doc(membershipId).get();
     const membership = membershipSnapshot.data();
     // The deterministic ID already ties the membership document to this

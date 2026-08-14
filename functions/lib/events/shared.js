@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VALID_EVENT_TYPES = void 0;
+exports.getEventMembershipId = exports.VALID_EVENT_TYPES = void 0;
 exports.validateEventCreationFields = validateEventCreationFields;
-exports.getEventMembershipId = getEventMembershipId;
 exports.buildEventDocument = buildEventDocument;
 exports.buildEventMemberDocument = buildEventMemberDocument;
 /**
@@ -14,6 +13,8 @@ exports.buildEventMemberDocument = buildEventMemberDocument;
  * creation flows cannot drift apart.
  */
 const validation_1 = require("../validation");
+const membershipIds_1 = require("../shared/membershipIds");
+Object.defineProperty(exports, "getEventMembershipId", { enumerable: true, get: function () { return membershipIds_1.getEventMembershipId; } });
 exports.VALID_EVENT_TYPES = ['wedding', 'social', 'corporate', 'private', 'other'];
 /** Validates the fields common to both creation flows. Throws ValidationError. */
 function validateEventCreationFields(obj) {
@@ -34,10 +35,6 @@ function validateEventCreationFields(obj) {
         venueName: obj.venueName,
         venueAddress: obj.venueAddress
     };
-}
-/** Deterministic event membership ID: `${eventId}_${userId}`. */
-function getEventMembershipId(eventId, userId) {
-    return `${eventId}_${userId}`;
 }
 /**
  * Builds a Firestore event document.

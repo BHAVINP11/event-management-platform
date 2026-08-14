@@ -1,18 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrganizationMembershipId = getOrganizationMembershipId;
+exports.getOrganizationMembershipId = void 0;
 exports.validateCreateOrganizationInput = validateCreateOrganizationInput;
 exports.buildOrganizationDocument = buildOrganizationDocument;
 exports.buildOrganizationMemberDocument = buildOrganizationMemberDocument;
 exports.isSlugTaken = isSlugTaken;
 exports.createOrganization = createOrganization;
 const validation_1 = require("../validation");
-/**
- * Helper to create the organization membership ID (deterministic).
- */
-function getOrganizationMembershipId(organizationId, userId) {
-    return `${organizationId}_${userId}`;
-}
+const membershipIds_1 = require("../shared/membershipIds");
+Object.defineProperty(exports, "getOrganizationMembershipId", { enumerable: true, get: function () { return membershipIds_1.getOrganizationMembershipId; } });
 /**
  * Validate the input for createOrganization.
  * Throws ValidationError if any field is invalid.
@@ -110,7 +106,7 @@ async function createOrganization(db, auth, input) {
     const organizationRef = db.collection('organizations').doc();
     const organizationId = organizationRef.id;
     // Build membership ID (deterministic)
-    const membershipId = getOrganizationMembershipId(organizationId, userId);
+    const membershipId = (0, membershipIds_1.getOrganizationMembershipId)(organizationId, userId);
     const membershipRef = db.collection('organizationMembers').doc(membershipId);
     // Execute atomically
     const batch = db.batch();

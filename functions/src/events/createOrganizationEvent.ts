@@ -1,5 +1,5 @@
 import { ValidationError } from '../validation';
-import { getOrganizationMembershipId } from '../onboarding/createOrganization';
+import { getOrganizationMembershipId } from '../shared/membershipIds';
 import {
   CallableAuthContext,
   EventCreationFields,

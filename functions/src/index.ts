@@ -7,6 +7,7 @@ import {
 import { handleCreateIndividualEvent } from './events/createIndividualEvent';
 import { handleCreateOrganizationEvent } from './events/createOrganizationEvent';
 import { ValidationError } from './validation';
+import { mapErrorToCallableResponse } from './errorMapping';
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -14,50 +15,15 @@ admin.initializeApp();
 const db = admin.firestore();
 
 /**
- * Application-level error response.
+ * Converts any error thrown by a callable's business logic into the
+ * `HttpsError` sent to the client: a valid Firebase code (never the raw
+ * application code), a user-safe message, and the original application code
+ * preserved in `details.appCode` so the client can still key its own
+ * messaging off of it. See `errorMapping.ts`.
  */
-interface ErrorResponse {
-  code: string;
-  message: string;
-}
-
-/**
- * Map validation and application errors to callable function error codes.
- */
-function mapErrorToResponse(error: unknown): ErrorResponse {
-  if (error instanceof ValidationError) {
-    return {
-      code: error.code,
-      message: error.message
-    };
-  }
-
-  if (error instanceof Error) {
-    // Firestore error
-    if (error.message.includes('ALREADY_EXISTS') || error.message.includes('already exists')) {
-      return {
-        code: 'conflict',
-        message: 'This resource already exists.'
-      };
-    }
-
-    if (error.message.includes('PERMISSION_DENIED')) {
-      return {
-        code: 'permission_denied',
-        message: 'You do not have permission to perform this action.'
-      };
-    }
-
-    return {
-      code: 'internal_error',
-      message: 'An unexpected error occurred. Please try again.'
-    };
-  }
-
-  return {
-    code: 'internal_error',
-    message: 'An unexpected error occurred. Please try again.'
-  };
+function toHttpsError(error: unknown): functions.https.HttpsError {
+  const { firebaseCode, message, appCode } = mapErrorToCallableResponse(error);
+  return new functions.https.HttpsError(firebaseCode, message, { appCode });
 }
 
 /**
@@ -80,7 +46,7 @@ function mapErrorToResponse(error: unknown): ErrorResponse {
  *   membershipId: string
  * }
  *
- * Errors:
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
  * - unauthenticated: Caller is not authenticated
  * - invalid_*: Input validation error
  * - organization_slug_taken: Slug is already in use
@@ -88,26 +54,15 @@ function mapErrorToResponse(error: unknown): ErrorResponse {
  * - internal_error: Server error
  */
 export const onCreateOrganization = functions.https.onCall(async (data, context) => {
-  // Require authentication
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated.');
-  }
-
   try {
-    // Validate input
+    if (!context.auth) {
+      throw new ValidationError('unauthenticated', 'User must be authenticated.');
+    }
+
     const validatedInput = validateCreateOrganizationInput(data);
-
-    // Call business logic with auth context
-    const result = await createOrganization(db, { uid: context.auth.uid }, validatedInput);
-
-    return result;
+    return await createOrganization(db, { uid: context.auth.uid }, validatedInput);
   } catch (error) {
-    const errorResponse = mapErrorToResponse(error);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    throw new functions.https.HttpsError(
-      errorResponse.code as any,
-      errorResponse.message
-    );
+    throw toHttpsError(error);
   }
 });
 
@@ -136,7 +91,7 @@ export const onCreateOrganization = functions.https.onCall(async (data, context)
  *   membershipId: string
  * }
  *
- * Errors:
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
  * - unauthenticated: Caller is not authenticated
  * - invalid_*: Input validation error
  * - conflict: Event already exists
@@ -146,12 +101,7 @@ export const onCreateIndividualEvent = functions.https.onCall(async (data, conte
   try {
     return await handleCreateIndividualEvent(db, data, context);
   } catch (error) {
-    const errorResponse = mapErrorToResponse(error);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    throw new functions.https.HttpsError(
-      errorResponse.code as any,
-      errorResponse.message
-    );
+    throw toHttpsError(error);
   }
 });
 
@@ -183,7 +133,7 @@ export const onCreateIndividualEvent = functions.https.onCall(async (data, conte
  *   membershipId: string
  * }
  *
- * Errors:
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
  * - unauthenticated: Caller is not authenticated
  * - invalid_*: Input validation error
  * - organization_not_found: Organization does not exist
@@ -195,11 +145,6 @@ export const onCreateOrganizationEvent = functions.https.onCall(async (data, con
   try {
     return await handleCreateOrganizationEvent(db, data, context);
   } catch (error) {
-    const errorResponse = mapErrorToResponse(error);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    throw new functions.https.HttpsError(
-      errorResponse.code as any,
-      errorResponse.message
-    );
+    throw toHttpsError(error);
   }
 });

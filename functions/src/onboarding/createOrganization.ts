@@ -7,6 +7,7 @@ import {
   validateContactPhone,
   ValidationError
 } from '../validation';
+import { getOrganizationMembershipId } from '../shared/membershipIds';
 
 export interface CreateOrganizationInput {
   name: string;
@@ -25,12 +26,7 @@ interface AuthContext {
   uid: string;
 }
 
-/**
- * Helper to create the organization membership ID (deterministic).
- */
-export function getOrganizationMembershipId(organizationId: string, userId: string): string {
-  return `${organizationId}_${userId}`;
-}
+export { getOrganizationMembershipId };
 
 /**
  * Validate the input for createOrganization.

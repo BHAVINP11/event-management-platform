@@ -90,8 +90,14 @@ describe('EventCreationService.createIndividualEvent', () => {
     expect(mockCallable).toHaveBeenCalledWith('onCreateIndividualEvent', formInput);
   });
 
-  test('converts a callable failure into a friendly EventCreationError', async () => {
-    mockCallable.mockRejectedValue({ code: 'invalid_timezone', message: 'Timezone "x" is not valid.' });
+  test('converts a callable failure into a friendly EventCreationError, keyed off details.appCode', async () => {
+    // The real Firebase code is the generic 'invalid-argument' — the specific
+    // reason travels in details.appCode (see functions/src/errorMapping.ts).
+    mockCallable.mockRejectedValue({
+      code: 'invalid-argument',
+      message: 'Timezone "x" is not valid.',
+      details: { appCode: 'invalid_timezone' }
+    });
     const service = buildService();
 
     await expect(service.createIndividualEvent(formInput)).rejects.toMatchObject({
@@ -100,14 +106,24 @@ describe('EventCreationService.createIndividualEvent', () => {
     });
   });
 
-  test('falls back to a generic message for an unrecognized error code', async () => {
-    mockCallable.mockRejectedValue({ code: 'internal', message: 'boom' });
+  test('falls back to a generic message for an unrecognized app code', async () => {
+    mockCallable.mockRejectedValue({ code: 'internal', message: 'boom', details: { appCode: 'internal_error' } });
     const service = buildService();
 
     const error = await service.createIndividualEvent(formInput).catch((e) => e);
 
     expect(error).toBeInstanceOf(EventCreationError);
     expect(error.friendlyMessage).toBe("We couldn't create your event right now.");
+  });
+
+  test('falls back to the standard Firebase code when details.appCode is missing', async () => {
+    mockCallable.mockRejectedValue({ code: 'unauthenticated', message: 'no auth' });
+    const service = buildService();
+
+    await expect(service.createIndividualEvent(formInput)).rejects.toMatchObject({
+      code: 'unauthenticated',
+      friendlyMessage: 'You must be logged in to create an event.'
+    });
   });
 });
 
@@ -128,10 +144,15 @@ describe('EventCreationService.createOrganizationEvent', () => {
   });
 
   test('surfaces organization access denial as a friendly error, not a raw code', async () => {
-    mockCallable.mockRejectedValue({ code: 'organization_role_not_allowed', message: 'role not allowed' });
+    mockCallable.mockRejectedValue({
+      code: 'permission-denied',
+      message: 'Your role does not allow creating events for this organization.',
+      details: { appCode: 'organization_role_not_allowed' }
+    });
     const service = buildService();
 
     await expect(service.createOrganizationEvent('org1', formInput)).rejects.toMatchObject({
+      code: 'organization_role_not_allowed',
       friendlyMessage: "Your role doesn't allow creating events for that organization."
     });
   });

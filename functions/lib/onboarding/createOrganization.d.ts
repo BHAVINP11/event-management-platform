@@ -1,3 +1,4 @@
+import { getOrganizationMembershipId } from '../shared/membershipIds';
 export interface CreateOrganizationInput {
     name: string;
     slug: string;
@@ -12,10 +13,7 @@ export interface CreateOrganizationOutput {
 interface AuthContext {
     uid: string;
 }
-/**
- * Helper to create the organization membership ID (deterministic).
- */
-export declare function getOrganizationMembershipId(organizationId: string, userId: string): string;
+export { getOrganizationMembershipId };
 /**
  * Validate the input for createOrganization.
  * Throws ValidationError if any field is invalid.
@@ -50,4 +48,3 @@ export declare function isSlugTaken(db: FirebaseFirestore.Firestore, slug: strin
  * @throws Error if Firestore transaction fails
  */
 export declare function createOrganization(db: FirebaseFirestore.Firestore, auth: AuthContext, input: CreateOrganizationInput): Promise<CreateOrganizationOutput>;
-export {};

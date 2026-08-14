@@ -1,3 +1,4 @@
+import { getEventMembershipId } from '../shared/membershipIds';
 export declare const VALID_EVENT_TYPES: readonly ["wedding", "social", "corporate", "private", "other"];
 export interface EventCreationFields {
     name: string;
@@ -21,8 +22,7 @@ export interface CallableAuthContext {
 }
 /** Validates the fields common to both creation flows. Throws ValidationError. */
 export declare function validateEventCreationFields(obj: Record<string, unknown>): EventCreationFields;
-/** Deterministic event membership ID: `${eventId}_${userId}`. */
-export declare function getEventMembershipId(eventId: string, userId: string): string;
+export { getEventMembershipId };
 /**
  * Builds a Firestore event document.
  *

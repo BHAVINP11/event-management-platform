@@ -15,6 +15,7 @@ import {
   validateVenueName,
   validateVenueAddress
 } from '../validation';
+import { getEventMembershipId } from '../shared/membershipIds';
 
 export const VALID_EVENT_TYPES = ['wedding', 'social', 'corporate', 'private', 'other'] as const;
 
@@ -60,10 +61,7 @@ export function validateEventCreationFields(obj: Record<string, unknown>): Event
   };
 }
 
-/** Deterministic event membership ID: `${eventId}_${userId}`. */
-export function getEventMembershipId(eventId: string, userId: string): string {
-  return `${eventId}_${userId}`;
-}
+export { getEventMembershipId };
 
 /**
  * Builds a Firestore event document.

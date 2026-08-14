@@ -19,7 +19,7 @@ import * as functions from 'firebase-functions';
  *   membershipId: string
  * }
  *
- * Errors:
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
  * - unauthenticated: Caller is not authenticated
  * - invalid_*: Input validation error
  * - organization_slug_taken: Slug is already in use
@@ -52,7 +52,7 @@ export declare const onCreateOrganization: functions.HttpsFunction & functions.R
  *   membershipId: string
  * }
  *
- * Errors:
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
  * - unauthenticated: Caller is not authenticated
  * - invalid_*: Input validation error
  * - conflict: Event already exists
@@ -87,7 +87,7 @@ export declare const onCreateIndividualEvent: functions.HttpsFunction & function
  *   membershipId: string
  * }
  *
- * Errors:
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
  * - unauthenticated: Caller is not authenticated
  * - invalid_*: Input validation error
  * - organization_not_found: Organization does not exist

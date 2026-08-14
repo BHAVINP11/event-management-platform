@@ -93,7 +93,10 @@ export async function createOrganization(input: CreateOrganizationInput): Promis
     return result.data;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    const code = error.code || 'internal_error';
+    // The Cloud Function's application-specific code (invalid_name, ...)
+    // travels in error.details.appCode, not the standard Firebase error.code
+    // it is thrown as — see functions/src/errorMapping.ts.
+    const code = error.details?.appCode || error.code || 'internal_error';
     const message = error.message || 'Unknown error';
     throw mapErrorToFriendly(code, message);
   }
@@ -117,7 +120,10 @@ export async function createIndividualEvent(input: CreateIndividualEventInput): 
     return result.data;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    const code = error.code || 'internal_error';
+    // The Cloud Function's application-specific code (invalid_name, ...)
+    // travels in error.details.appCode, not the standard Firebase error.code
+    // it is thrown as — see functions/src/errorMapping.ts.
+    const code = error.details?.appCode || error.code || 'internal_error';
     const message = error.message || 'Unknown error';
     throw mapErrorToFriendly(code, message);
   }
