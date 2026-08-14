@@ -30,6 +30,7 @@ export type FirebaseCallableErrorCode =
   | 'not-found'
   | 'permission-denied'
   | 'already-exists'
+  | 'failed-precondition'
   | 'internal';
 
 /** Application codes that map to something other than the invalid_* rule or 'internal'. */
@@ -41,7 +42,15 @@ const KNOWN_APP_CODES: Record<string, FirebaseCallableErrorCode> = {
   organization_not_found: 'not-found',
   conflict: 'already-exists',
   organization_slug_taken: 'already-exists',
-  internal_error: 'internal'
+  internal_error: 'internal',
+  event_not_found: 'not-found',
+  event_access_denied: 'permission-denied',
+  event_role_not_allowed: 'permission-denied',
+  invitation_already_pending: 'already-exists',
+  invitation_not_found: 'not-found',
+  invitation_not_pending: 'failed-precondition',
+  invitation_expired: 'failed-precondition',
+  invitation_email_mismatch: 'permission-denied'
 };
 
 function firebaseCodeFor(appCode: string): FirebaseCallableErrorCode {

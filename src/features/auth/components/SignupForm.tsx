@@ -1,12 +1,14 @@
 import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { signUp } from '@/features/auth/services/authService';
 import { mapFirebaseAuthError } from '@/features/auth/services/errorMapper';
+import { getSafeRedirectTarget } from '@/lib/redirectTarget';
 
 const MIN_PASSWORD_LENGTH = 6;
 
 export function SignupForm(): JSX.Element {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,7 +47,7 @@ export function SignupForm(): JSX.Element {
 
     try {
       await signUp({ firstName, lastName, email, password });
-      navigate('/dashboard');
+      navigate(getSafeRedirectTarget(searchParams) ?? '/dashboard');
     } catch (authError) {
       setError(mapFirebaseAuthError(authError));
     } finally {

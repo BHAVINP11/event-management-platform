@@ -1,10 +1,12 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { signIn } from '@/features/auth/services/authService';
 import { mapFirebaseAuthError } from '@/features/auth/services/errorMapper';
+import { getSafeRedirectTarget } from '@/lib/redirectTarget';
 
 export function LoginForm(): JSX.Element {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +19,7 @@ export function LoginForm(): JSX.Element {
 
     try {
       await signIn({ email, password });
-      navigate('/dashboard');
+      navigate(getSafeRedirectTarget(searchParams) ?? '/dashboard');
     } catch (authError) {
       setError(mapFirebaseAuthError(authError));
     } finally {

@@ -18,6 +18,8 @@ const VENUE_NAME_MAX = 200;
 const VENUE_ADDRESS_MAX = 500;
 const TIMEZONE_MAX = 100;
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export class ValidationError extends Error {
   constructor(
     public code: string,
@@ -109,11 +111,29 @@ export function validateContactEmail(email: string | undefined | unknown): void 
     throw new ValidationError('invalid_email', 'Email must be a string.');
   }
 
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!EMAIL_REGEX.test(email)) {
     throw new ValidationError('invalid_email', 'Email format is invalid.');
   }
+}
+
+/**
+ * Validate a required email address (e.g. an invitation's invitedEmail).
+ * Normalizes to lowercase/trimmed so storage and comparisons (including the
+ * Firestore rule that matches an invitation to its invitee) are consistent
+ * regardless of how the client cased or spaced the input.
+ */
+export function validateRequiredEmail(email: string | unknown): string {
+  if (!email || typeof email !== 'string') {
+    throw new ValidationError('invalid_email', 'Email must be a non-empty string.');
+  }
+
+  const normalized = email.trim().toLowerCase();
+
+  if (!EMAIL_REGEX.test(normalized)) {
+    throw new ValidationError('invalid_email', 'Email format is invalid.');
+  }
+
+  return normalized;
 }
 
 /**

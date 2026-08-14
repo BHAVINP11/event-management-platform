@@ -421,6 +421,15 @@ export const resourceStyles = `
     cursor: default;
   }
 
+  .event-nav-item a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .event-nav-item a:hover {
+    color: #0066cc;
+  }
+
   .event-nav-soon {
     font-size: 0.68rem;
     text-transform: uppercase;

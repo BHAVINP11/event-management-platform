@@ -18,7 +18,19 @@ describe('mapErrorToCallableResponse', () => {
         ['organization_access_denied', 'permission-denied'],
         ['organization_role_not_allowed', 'permission-denied'],
         ['organization_slug_taken', 'already-exists'],
-        ['conflict', 'already-exists']
+        ['conflict', 'already-exists'],
+        ['invalid_role', 'invalid-argument'],
+        ['invalid_side', 'invalid-argument'],
+        ['invalid_event_id', 'invalid-argument'],
+        ['invalid_invitation_id', 'invalid-argument'],
+        ['event_not_found', 'not-found'],
+        ['event_access_denied', 'permission-denied'],
+        ['event_role_not_allowed', 'permission-denied'],
+        ['invitation_already_pending', 'already-exists'],
+        ['invitation_not_found', 'not-found'],
+        ['invitation_not_pending', 'failed-precondition'],
+        ['invitation_expired', 'failed-precondition'],
+        ['invitation_email_mismatch', 'permission-denied']
     ])('maps ValidationError(%s) to firebaseCode %s', (appCode, firebaseCode) => {
         const result = (0, errorMapping_1.mapErrorToCallableResponse)(new validation_1.ValidationError(appCode, 'some message'));
         expect(result.firebaseCode).toBe(firebaseCode);

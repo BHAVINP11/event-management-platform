@@ -44,3 +44,18 @@ export class EventCreationError extends AppError {
     this.code = code;
   }
 }
+
+/**
+ * Raised when creating or accepting an invitation fails, whether from
+ * invalid input, denied event access, an expired/mismatched invitation, or
+ * an infrastructure failure. `code` carries the Cloud Function's error code.
+ */
+export class InvitationError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'InvitationError';
+    this.code = code;
+  }
+}

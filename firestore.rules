@@ -91,13 +91,28 @@ service cloud.firestore {
     }
 
     // Event membership rules
-    // eventMembers/{membershipId} — user can read their own memberships
+    // eventMembers/{membershipId} — user can read their own memberships, and
+    // (for the People page) any membership belonging to an event they are
+    // themselves an active member of.
     match /eventMembers/{membershipId} {
-      // User may read only if userId in document matches authenticated user
-      allow read: if isAuthenticated() && 
-        resource.data.userId == getCurrentUserId();
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == getCurrentUserId() || isActiveEventMember(resource.data.eventId));
 
       // Deny all writes (membership creation/management is server-side only)
+      allow write: if false;
+    }
+
+    // Invitation rules
+    // invitations/{invitationId} — the invitee (matched by their
+    // authenticated email) may read their own invitation; any active member
+    // of the event may read invitations for that event (People page).
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.invitedEmail == request.auth.token.email.lower() ||
+         isActiveEventMember(resource.data.eventId));
+
+      // Deny all writes (invitation creation/acceptance is server-side only,
+      // via createInvitation / acceptInvitation Cloud Functions)
       allow write: if false;
     }
   }

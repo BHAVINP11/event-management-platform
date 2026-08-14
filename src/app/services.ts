@@ -2,10 +2,14 @@ import { FirebaseOrganizationRepository } from '@/services/firebase/repositories
 import { FirebaseOrganizationMemberRepository } from '@/services/firebase/repositories/firebaseOrganizationMemberRepository';
 import { FirebaseEventRepository } from '@/services/firebase/repositories/firebaseEventRepository';
 import { FirebaseEventMemberRepository } from '@/services/firebase/repositories/firebaseEventMemberRepository';
+import { FirebaseInvitationRepository } from '@/services/firebase/repositories/firebaseInvitationRepository';
+import { FirebaseUserRepository } from '@/services/firebase/repositories/firebaseUserRepository';
 import { AuthorizationService } from '@/features/auth/services/authorizationService';
 import { DashboardService } from '@/features/dashboard/services/dashboardService';
 import { EventAccessService } from '@/features/events/services/eventAccessService';
 import { EventCreationService } from '@/features/events/services/eventCreationService';
+import { EventPeopleService } from '@/features/events/services/eventPeopleService';
+import { InvitationService } from '@/features/events/services/invitationService';
 
 /**
  * Composition root.
@@ -19,6 +23,8 @@ const organizationRepository = new FirebaseOrganizationRepository();
 const organizationMemberRepository = new FirebaseOrganizationMemberRepository();
 const eventRepository = new FirebaseEventRepository();
 const eventMemberRepository = new FirebaseEventMemberRepository();
+const invitationRepository = new FirebaseInvitationRepository();
+const userRepository = new FirebaseUserRepository();
 
 export const authorizationService = new AuthorizationService(
   organizationMemberRepository,
@@ -38,3 +44,13 @@ export const eventAccessService = new EventAccessService(
 );
 
 export const eventCreationService = new EventCreationService(authorizationService, organizationRepository);
+
+export const eventPeopleService = new EventPeopleService(
+  authorizationService,
+  eventRepository,
+  eventMemberRepository,
+  invitationRepository,
+  userRepository
+);
+
+export const invitationService = new InvitationService();

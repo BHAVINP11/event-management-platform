@@ -11,6 +11,7 @@ exports.normalizeAndValidateSlug = normalizeAndValidateSlug;
 exports.validateOrganizationName = validateOrganizationName;
 exports.validateOrganizationDescription = validateOrganizationDescription;
 exports.validateContactEmail = validateContactEmail;
+exports.validateRequiredEmail = validateRequiredEmail;
 exports.validateContactPhone = validateContactPhone;
 exports.validateEventName = validateEventName;
 exports.validateEventType = validateEventType;
@@ -30,6 +31,7 @@ const EVENT_DESCRIPTION_MAX = 2000;
 const VENUE_NAME_MAX = 200;
 const VENUE_ADDRESS_MAX = 500;
 const TIMEZONE_MAX = 100;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 class ValidationError extends Error {
     constructor(code, message) {
         super(message);
@@ -98,11 +100,25 @@ function validateContactEmail(email) {
     if (typeof email !== 'string') {
         throw new ValidationError('invalid_email', 'Email must be a string.');
     }
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!EMAIL_REGEX.test(email)) {
         throw new ValidationError('invalid_email', 'Email format is invalid.');
     }
+}
+/**
+ * Validate a required email address (e.g. an invitation's invitedEmail).
+ * Normalizes to lowercase/trimmed so storage and comparisons (including the
+ * Firestore rule that matches an invitation to its invitee) are consistent
+ * regardless of how the client cased or spaced the input.
+ */
+function validateRequiredEmail(email) {
+    if (!email || typeof email !== 'string') {
+        throw new ValidationError('invalid_email', 'Email must be a non-empty string.');
+    }
+    const normalized = email.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(normalized)) {
+        throw new ValidationError('invalid_email', 'Email format is invalid.');
+    }
+    return normalized;
 }
 /**
  * Validate optional contact phone.

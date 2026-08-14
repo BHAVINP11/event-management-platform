@@ -16,6 +16,7 @@ import {
   validateVenueAddress
 } from '../validation';
 import { getEventMembershipId } from '../shared/membershipIds';
+import { CallableAuthContext } from '../shared/callableContext';
 
 export const VALID_EVENT_TYPES = ['wedding', 'social', 'corporate', 'private', 'other'] as const;
 
@@ -30,14 +31,7 @@ export interface EventCreationFields {
   venueAddress?: string;
 }
 
-/**
- * The shape callable functions receive as `context`. Deliberately narrower
- * than `functions.https.CallableContext` so this module — and its tests —
- * never need to import firebase-functions or initialize the Admin SDK.
- */
-export interface CallableAuthContext {
-  auth?: { uid: string } | null;
-}
+export { CallableAuthContext };
 
 /** Validates the fields common to both creation flows. Throws ValidationError. */
 export function validateEventCreationFields(obj: Record<string, unknown>): EventCreationFields {

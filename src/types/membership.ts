@@ -21,6 +21,16 @@ export enum MembershipStatus {
   Inactive = 'inactive'
 }
 
+/**
+ * Which side of the event a couple/family member belongs to. Only
+ * meaningful for EventRole.Couple and EventRole.Family — planner, staff, and
+ * viewer memberships never have a side.
+ */
+export enum EventMemberSide {
+  Bride = 'bride',
+  Groom = 'groom'
+}
+
 export interface OrganizationMember {
   id: string;
   organizationId: string;
@@ -36,6 +46,7 @@ export interface EventMember {
   eventId: string;
   userId: string;
   role: EventRole;
+  side?: EventMemberSide;
   status: MembershipStatus;
   invitedBy?: string;
   createdAt: string;

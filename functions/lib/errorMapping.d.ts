@@ -21,7 +21,7 @@ export interface CallableErrorResponse {
  * a module that otherwise has no Firebase dependency and is unit tested
  * without one.
  */
-export type FirebaseCallableErrorCode = 'unauthenticated' | 'invalid-argument' | 'not-found' | 'permission-denied' | 'already-exists' | 'internal';
+export type FirebaseCallableErrorCode = 'unauthenticated' | 'invalid-argument' | 'not-found' | 'permission-denied' | 'already-exists' | 'failed-precondition' | 'internal';
 /**
  * Maps any error thrown by a callable's business logic to the callable error
  * response: a valid Firebase code, a user-safe message, and the original

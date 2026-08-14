@@ -1,12 +1,12 @@
 "use strict";
 /**
  * Minimal in-memory stand-in for the Admin SDK Firestore surface actually used
- * by the event-creation Cloud Functions: `collection(name).doc(id?)`,
- * `.get()`/`.set()`, and `.batch()`/`.commit()`.
+ * by the trusted Cloud Functions: `collection(name).doc(id?)`, `.get()` /
+ * `.set()` / `.update()`, simple equality `.where()` queries, and
+ * `.batch()`/`.commit()`.
  *
- * This lets `createIndividualEvent` / `createOrganizationEvent` be unit
- * tested without the Firestore emulator (which needs a local Java runtime)
- * and without initializing the Admin SDK.
+ * This lets business logic be unit tested without the Firestore emulator
+ * (which needs a local Java runtime) and without initializing the Admin SDK.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FakeFirestore = void 0;
@@ -28,6 +28,35 @@ class FakeDocRef {
     async set(data) {
         this.store.set(this.path, data);
     }
+    async update(data) {
+        const existing = this.store.get(this.path) ?? {};
+        this.store.set(this.path, { ...existing, ...data });
+    }
+}
+class FakeQuery {
+    constructor(store, collectionName, clauses) {
+        this.store = store;
+        this.collectionName = collectionName;
+        this.clauses = clauses;
+    }
+    where(field, _op, value) {
+        return new FakeQuery(this.store, this.collectionName, [...this.clauses, { field, value }]);
+    }
+    async get() {
+        const prefix = `${this.collectionName}/`;
+        const docs = [];
+        for (const [path, data] of this.store.entries()) {
+            if (!path.startsWith(prefix)) {
+                continue;
+            }
+            const matches = this.clauses.every(({ field, value }) => data[field] === value);
+            if (matches) {
+                const id = path.slice(prefix.length);
+                docs.push({ exists: true, id, data: () => data });
+            }
+        }
+        return { empty: docs.length === 0, docs };
+    }
 }
 class FakeCollectionRef {
     constructor(store, name, idCounter) {
@@ -39,6 +68,9 @@ class FakeCollectionRef {
         const docId = id ?? `auto-${this.name}-${this.idCounter.n++}`;
         return new FakeDocRef(this.store, docId, `${this.name}/${docId}`);
     }
+    where(field, op, value) {
+        return new FakeQuery(this.store, this.name, []).where(field, op, value);
+    }
 }
 class FakeWriteBatch {
     constructor(store) {
@@ -47,6 +79,13 @@ class FakeWriteBatch {
     }
     set(ref, data) {
         this.operations.push(() => this.store.set(ref.path, data));
+        return this;
+    }
+    update(ref, data) {
+        this.operations.push(() => {
+            const existing = this.store.get(ref.path) ?? {};
+            this.store.set(ref.path, { ...existing, ...data });
+        });
         return this;
     }
     async commit() {

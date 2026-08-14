@@ -15,10 +15,13 @@ import { eventRoleLabel, eventStatusLabel, eventTypeLabel } from '@/lib/labels';
  */
 const UPCOMING_WORKSPACE_SECTIONS = ['Guests', 'Functions', 'Expenses', 'Vendors', 'Tasks'];
 
-function EventWorkspaceNav(): JSX.Element {
+function EventWorkspaceNav({ eventId }: { eventId: string }): JSX.Element {
   return (
     <ul className="event-nav">
       <li className="event-nav-item active">Overview</li>
+      <li className="event-nav-item">
+        <Link to={`/events/${eventId}/people`}>People</Link>
+      </li>
       {UPCOMING_WORKSPACE_SECTIONS.map((section) => (
         <li key={section} className="event-nav-item disabled">
           {section}
@@ -94,7 +97,7 @@ function EventWorkspace({ event }: { event: EventDetailView }): JSX.Element {
         </p>
       </div>
 
-      <EventWorkspaceNav />
+      <EventWorkspaceNav eventId={event.id} />
 
       <EventOverview event={event} />
     </>

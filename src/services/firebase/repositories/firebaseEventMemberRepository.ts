@@ -1,21 +1,28 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, runTransaction, updateDoc, where } from 'firebase/firestore';
 import { firestore } from '@/services/firebase/firestore';
-import { EventMember, EventRole, MembershipStatus } from '@/types/membership';
+import { EventMember, EventMemberSide, EventRole, MembershipStatus } from '@/types/membership';
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
 import { RepositoryConflictError, RepositoryDataError, RepositoryInfrastructureError } from '@/repositories/errors';
 import { getEventMembershipId } from '@/repositories/membershipIds';
-import { getOptionalString, getRequiredString, getValidatedEnum } from '@/services/firebase/repositories/firestoreMapping';
+import {
+  getOptionalString,
+  getOptionalValidatedEnum,
+  getRequiredString,
+  getValidatedEnum
+} from '@/services/firebase/repositories/firestoreMapping';
 
 const eventMembersCollection = 'eventMembers';
 
 const validEventRoles = Object.values(EventRole) as readonly EventMember['role'][];
 const validMembershipStatuses = Object.values(MembershipStatus) as readonly EventMember['status'][];
+const validEventMemberSides = Object.values(EventMemberSide) as readonly EventMemberSide[];
 
 const mapEventMemberToFirestore = (member: EventMember): Record<string, unknown> => ({
   id: member.id,
   eventId: member.eventId,
   userId: member.userId,
   role: member.role,
+  side: member.side ?? null,
   status: member.status,
   invitedBy: member.invitedBy,
   createdAt: member.createdAt,
@@ -32,6 +39,7 @@ const mapFirestoreToEventMember = (memberId: string, data: Record<string, unknow
     eventId: getRequiredString(data.eventId, 'eventId'),
     userId: getRequiredString(data.userId, 'userId'),
     role: getValidatedEnum(data.role, 'role', validEventRoles),
+    side: getOptionalValidatedEnum(data.side, 'side', validEventMemberSides),
     status: getValidatedEnum(data.status, 'status', validMembershipStatuses),
     invitedBy: getOptionalString(data.invitedBy),
     createdAt: getRequiredString(data.createdAt, 'createdAt'),

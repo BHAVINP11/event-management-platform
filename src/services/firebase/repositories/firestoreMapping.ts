@@ -48,6 +48,19 @@ export const getValidatedEnum = <T extends string>(
   return value as T;
 };
 
+/** Like getValidatedEnum, but null/undefined map to undefined instead of throwing. */
+export const getOptionalValidatedEnum = <T extends string>(
+  value: unknown,
+  fieldName: string,
+  allowedValues: readonly T[]
+): T | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  return getValidatedEnum(value, fieldName, allowedValues);
+};
+
 export const getStringOrNull = (value: unknown): string | null | undefined => {
   if (value === null) {
     return null;

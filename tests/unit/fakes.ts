@@ -2,10 +2,14 @@ import { OrganizationRepository } from '@/repositories/interfaces/organizationRe
 import { OrganizationMemberRepository } from '@/repositories/interfaces/organizationMemberRepository';
 import { EventRepository } from '@/repositories/interfaces/eventRepository';
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
+import { InvitationRepository } from '@/repositories/interfaces/invitationRepository';
+import { UserRepository } from '@/repositories/interfaces/userRepository';
 import { RepositoryInfrastructureError } from '@/repositories/errors';
 import { getEventMembershipId, getOrganizationMembershipId } from '@/repositories/membershipIds';
 import { Organization } from '@/types/organization';
 import { Event, EventStatus, EventType } from '@/types/event';
+import { Invitation, InvitationStatus } from '@/types/invitation';
+import { User } from '@/types/user';
 import {
   EventMember,
   EventRole,
@@ -67,6 +71,28 @@ export const buildEventMember = (
   userId,
   role: EventRole.Owner,
   status: MembershipStatus.Active,
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildInvitation = (
+  overrides: Partial<Invitation> & { id: string; eventId: string; invitedEmail: string }
+): Invitation => ({
+  role: EventRole.Family,
+  status: InvitationStatus.Pending,
+  invitedBy: 'owner1',
+  expiresAt: '2030-01-01T00:00:00.000Z',
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildUser = (overrides: Partial<User> & { id: string }): User => ({
+  firstName: 'Bhavin',
+  lastName: 'Patel',
+  displayName: 'Bhavin Patel',
+  email: 'bhavin@example.com',
   createdAt: now,
   updatedAt: now,
   ...overrides
@@ -147,6 +173,9 @@ export class FakeEventMemberRepository implements EventMemberRepository {
   }
 
   async listByEvent(eventId: string): Promise<EventMember[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list event members.');
+    }
     return this.members.filter((m) => m.eventId === eventId);
   }
 
@@ -160,4 +189,44 @@ export class FakeEventMemberRepository implements EventMemberRepository {
   create = unsupported;
   update = unsupported;
   delete = unsupported;
+}
+
+export class FakeInvitationRepository implements InvitationRepository {
+  failing = false;
+
+  constructor(private readonly invitations: readonly Invitation[] = []) {}
+
+  async getById(invitationId: string): Promise<Invitation | null> {
+    return this.invitations.find((i) => i.id === invitationId) ?? null;
+  }
+
+  async listByEvent(eventId: string): Promise<Invitation[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list invitations.');
+    }
+    return this.invitations.filter((i) => i.eventId === eventId);
+  }
+
+  async listPendingByEmail(email: string): Promise<Invitation[]> {
+    return this.invitations.filter((i) => i.invitedEmail === email && i.status === InvitationStatus.Pending);
+  }
+
+  create = unsupported;
+  update = unsupported;
+}
+
+export class FakeUserRepository implements UserRepository {
+  failing = false;
+
+  constructor(private readonly users: readonly User[] = []) {}
+
+  async getById(userId: string): Promise<User | null> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to load user profile.');
+    }
+    return this.users.find((u) => u.id === userId) ?? null;
+  }
+
+  create = unsupported;
+  update = unsupported;
 }

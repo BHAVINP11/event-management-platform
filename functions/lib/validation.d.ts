@@ -30,6 +30,13 @@ export declare function validateOrganizationDescription(description: string | un
  */
 export declare function validateContactEmail(email: string | undefined | unknown): void;
 /**
+ * Validate a required email address (e.g. an invitation's invitedEmail).
+ * Normalizes to lowercase/trimmed so storage and comparisons (including the
+ * Firestore rule that matches an invitation to its invitee) are consistent
+ * regardless of how the client cased or spaced the input.
+ */
+export declare function validateRequiredEmail(email: string | unknown): string;
+/**
  * Validate optional contact phone.
  */
 export declare function validateContactPhone(phone: string | undefined | unknown): void;

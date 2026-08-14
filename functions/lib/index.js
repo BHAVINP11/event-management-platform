@@ -33,12 +33,15 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onCreateOrganizationEvent = exports.onCreateIndividualEvent = exports.onCreateOrganization = void 0;
+exports.onGetInvitationPreview = exports.onAcceptInvitation = exports.onCreateInvitation = exports.onCreateOrganizationEvent = exports.onCreateIndividualEvent = exports.onCreateOrganization = void 0;
 const admin = __importStar(require("firebase-admin"));
 const functions = __importStar(require("firebase-functions"));
 const createOrganization_1 = require("./onboarding/createOrganization");
 const createIndividualEvent_1 = require("./events/createIndividualEvent");
 const createOrganizationEvent_1 = require("./events/createOrganizationEvent");
+const createInvitation_1 = require("./invitations/createInvitation");
+const acceptInvitation_1 = require("./invitations/acceptInvitation");
+const getInvitationPreview_1 = require("./invitations/getInvitationPreview");
 const validation_1 = require("./validation");
 const errorMapping_1 = require("./errorMapping");
 // Initialize Firebase Admin SDK
@@ -172,6 +175,118 @@ exports.onCreateIndividualEvent = functions.https.onCall(async (data, context) =
 exports.onCreateOrganizationEvent = functions.https.onCall(async (data, context) => {
     try {
         return await (0, createOrganizationEvent_1.handleCreateOrganizationEvent)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: createInvitation
+ *
+ * Invites a person to an event. The caller must have an active EventMember
+ * with role owner or planner — verified against the stored membership
+ * document. Creates a pending Invitation only; no EventMember is created
+ * until the invitation is accepted.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   invitedEmail: string,
+ *   role: string ('couple' | 'family' | 'planner' | 'staff' | 'viewer'),
+ *   side?: string ('bride' | 'groom', only for role couple/family)
+ * }
+ *
+ * Output:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot invite people
+ * - invitation_already_pending: A pending invitation already exists for this event + email
+ * - internal_error: Server error
+ */
+exports.onCreateInvitation = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, createInvitation_1.handleCreateInvitation)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: acceptInvitation
+ *
+ * Accepts a pending invitation and creates the invitee's EventMember
+ * (deterministic ID `eventMembers/{eventId}_{userId}`), copying role, side,
+ * and invitedBy from the invitation. The invitation is marked accepted in
+ * the same atomic write.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   eventId: string,
+ *   membershipId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation does not exist
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - invitation_expired: Invitation's expiresAt has passed
+ * - invitation_email_mismatch: Caller's authenticated email does not match invitedEmail
+ * - internal_error: Server error
+ */
+exports.onAcceptInvitation = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, acceptInvitation_1.handleAcceptInvitation)(db, data, context);
+    }
+    catch (error) {
+        throw toHttpsError(error);
+    }
+});
+/**
+ * Callable Cloud Function: getInvitationPreview
+ *
+ * Read-only projection for the `/invitations/:invitationId` acceptance page:
+ * the event's name plus the invitation's own fields. Gated by the same
+ * email-match check as acceptance, and does not require event membership —
+ * that would defeat the point, since the invitee doesn't have it yet.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   eventName: string,
+ *   invitedEmail: string,
+ *   role: string,
+ *   side: string | null
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation (or its event) does not exist
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - invitation_expired: Invitation's expiresAt has passed
+ * - invitation_email_mismatch: Caller's authenticated email does not match invitedEmail
+ * - internal_error: Server error
+ */
+exports.onGetInvitationPreview = functions.https.onCall(async (data, context) => {
+    try {
+        return await (0, getInvitationPreview_1.handleGetInvitationPreview)(db, data, context);
     }
     catch (error) {
         throw toHttpsError(error);

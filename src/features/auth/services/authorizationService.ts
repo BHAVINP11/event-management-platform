@@ -1,7 +1,7 @@
 import { OrganizationMemberRepository } from '@/repositories/interfaces/organizationMemberRepository';
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
 import { AuthorizationResult } from '@/features/auth/types/authorization';
-import { MembershipStatus, OrganizationRole } from '@/types/membership';
+import { EventRole, MembershipStatus, OrganizationRole } from '@/types/membership';
 import { OrganizationMember, EventMember } from '@/types/membership';
 
 /**
@@ -14,6 +14,13 @@ const eventCreationOrganizationRoles: readonly OrganizationRole[] = [
   OrganizationRole.Admin,
   OrganizationRole.Planner
 ];
+
+/**
+ * Event roles that are expected to invite people to an event. Used only to
+ * decide whether the "Invite Person" entry point is offered in the UI; the
+ * trusted createInvitation Cloud Function remains the authority.
+ */
+const eventInvitationRoles: readonly EventRole[] = [EventRole.Owner, EventRole.Planner];
 
 export class AuthorizationService {
   constructor(
@@ -128,5 +135,13 @@ export class AuthorizationService {
       membership.status === MembershipStatus.Active &&
       eventCreationOrganizationRoles.includes(membership.role)
     );
+  }
+
+  /**
+   * Whether an event membership implies the user may invite people to that
+   * event. Pure so callers can reuse a membership they have already loaded.
+   */
+  canInviteToEvent(membership: EventMember): boolean {
+    return membership.status === MembershipStatus.Active && eventInvitationRoles.includes(membership.role);
   }
 }

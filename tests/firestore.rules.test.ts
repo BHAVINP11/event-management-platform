@@ -47,6 +47,18 @@ const eventMember = (eventId: string, userId: string, status: string) => ({
   updatedAt: now
 });
 
+const invitation = (eventId: string, invitedEmail: string, status = 'pending') => ({
+  id: 'invitation1',
+  eventId,
+  invitedEmail,
+  role: 'family',
+  status,
+  invitedBy: 'owner1',
+  expiresAt: '2030-01-01T00:00:00.000Z',
+  createdAt: now,
+  updatedAt: now
+});
+
 const seed = async (callback: (adminDb: RulesTestContext) => Promise<void>): Promise<void> => {
   await testEnv.withSecurityRulesDisabled(callback);
 };
@@ -259,6 +271,122 @@ describe('Firestore Security Rules', () => {
       const db = testEnv.authenticatedContext('user1').firestore();
       await expect(db.collection('events').get()).rejects.toThrow();
       await expect(db.collection('organizations').get()).rejects.toThrow();
+    });
+  });
+
+  // Step 10 widens eventMembers reads so the People page can list everyone on
+  // a shared event, not just the caller's own membership. The widening is
+  // gated on the caller already being an active member of that same event.
+  describe('People page: co-member visibility', () => {
+    test('an active event member can read a co-member\'s membership for the same event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).set(eventMember('event1', 'user2', 'active'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).get()
+      ).resolves.toBeDefined();
+    });
+
+    test('an active event member can list every membership for that event', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'));
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).set(eventMember('event1', 'user2', 'active'));
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event2', 'user3')).set(eventMember('event2', 'user3', 'active'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('eventMembers').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(2);
+    });
+
+    test('a user cannot read a co-member\'s membership for an event they do not belong to', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).set(eventMember('event1', 'user2', 'active'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).get()
+      ).rejects.toThrow();
+    });
+
+    test('an inactive membership does not grant visibility into the event\'s other members', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'inactive'));
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).set(eventMember('event1', 'user2', 'active'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user2')).get()
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Invitations', () => {
+    test('the invited person can read their own invitation by matching authenticated email', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'meena@example.com' }).firestore().collection('invitations').doc('invitation1').get()
+      ).resolves.toBeDefined();
+    });
+
+    test('email matching is case-insensitive', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'Meena@Example.com' }).firestore().collection('invitations').doc('invitation1').get()
+      ).resolves.toBeDefined();
+    });
+
+    test('an authenticated user with a different email cannot read someone else\'s invitation', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user2', { email: 'stranger@example.com' }).firestore().collection('invitations').doc('invitation1').get()
+      ).rejects.toThrow();
+    });
+
+    test('an active member of the event can read invitations for that event (People page)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('eventMembers').doc(eventMembershipId('event1', 'owner1')).set(eventMember('event1', 'owner1', 'active'));
+        await adminDb.firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('owner1', { email: 'owner1@example.com' }).firestore().collection('invitations').doc('invitation1').get()
+      ).resolves.toBeDefined();
+
+      const snapshot = await testEnv.authenticatedContext('owner1', { email: 'owner1@example.com' }).firestore().collection('invitations').where('eventId', '==', 'event1').get();
+      expect(snapshot.docs).toHaveLength(1);
+    });
+
+    test('a non-member with an unrelated email cannot read an event\'s invitations', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('stranger1', { email: 'stranger@example.com' }).firestore().collection('invitations').doc('invitation1').get()
+      ).rejects.toThrow();
+    });
+
+    test('client cannot create an invitation directly', async () => {
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'owner1@example.com' }).firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com'))
+      ).rejects.toThrow();
+    });
+
+    test('client cannot update an invitation directly, e.g. to accept it themselves', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'meena@example.com' }).firestore().collection('invitations').doc('invitation1').update({ status: 'accepted' })
+      ).rejects.toThrow();
+    });
+
+    test('client cannot create an eventMember directly, e.g. to accept an invitation without the Cloud Function', async () => {
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'))
+      ).rejects.toThrow();
     });
   });
 });
