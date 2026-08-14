@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const createOrganization_1 = require("../onboarding/createOrganization");
-const createIndividualEvent_1 = require("../onboarding/createIndividualEvent");
+const createIndividualEvent_1 = require("../events/createIndividualEvent");
 const validation_1 = require("../validation");
 describe('Organization Validation', () => {
     describe('validateCreateOrganizationInput', () => {

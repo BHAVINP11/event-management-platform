@@ -36,6 +36,4 @@ export interface DashboardEventSummary {
 export interface DashboardData {
   organizations: DashboardOrganizationSummary[];
   events: DashboardEventSummary[];
-  /** Whether event-creation entry points should be offered to this user. */
-  canCreateEvent: boolean;
 }

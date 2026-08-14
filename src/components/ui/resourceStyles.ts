@@ -230,4 +230,231 @@ export const resourceStyles = `
       animation: none;
     }
   }
+
+  /* Event creation: entry-point choice, organization selector, form */
+
+  .creation-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .creation-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 1.25rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .creation-option:hover {
+    border-color: #0066cc;
+    background: #f0f7ff;
+  }
+
+  .creation-option h3 {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.05rem;
+    color: #333;
+  }
+
+  .creation-option p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+  }
+
+  .org-select-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    list-style: none;
+    margin: 0 0 1.5rem 0;
+    padding: 0;
+  }
+
+  .org-select-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .org-select-item:has(input:checked) {
+    border-color: #0066cc;
+    background: #f0f7ff;
+  }
+
+  .org-select-item-label {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .org-select-item-label strong {
+    color: #333;
+    font-size: 0.95rem;
+  }
+
+  .org-select-item-label span {
+    color: #666;
+    font-size: 0.8rem;
+  }
+
+  .event-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 600px;
+  }
+
+  .event-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .event-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .event-form label {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.9rem;
+  }
+
+  .event-form input,
+  .event-form textarea,
+  .event-form select {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .event-form input:focus,
+  .event-form textarea:focus,
+  .event-form select:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+  }
+
+  .event-form input:disabled,
+  .event-form textarea:disabled,
+  .event-form select:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .form-error {
+    padding: 1rem;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 4px;
+    color: #c33;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 600px) {
+    .creation-options {
+      grid-template-columns: 1fr;
+    }
+
+    .event-form .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Event workspace: header + navigation shell */
+
+  .event-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .event-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    margin: 0 0 2rem 0;
+    padding: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .event-nav-item {
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    color: #666;
+    border-bottom: 2px solid transparent;
+  }
+
+  .event-nav-item.active {
+    color: #0066cc;
+    border-bottom-color: #0066cc;
+    font-weight: 500;
+  }
+
+  .event-nav-item.disabled {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #aaa;
+    cursor: default;
+  }
+
+  .event-nav-soon {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: #f1f5f9;
+    color: #94a3b8;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+  }
+
+  .event-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    max-width: 700px;
+  }
+
+  .event-overview-field dt {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #94a3b8;
+  }
+
+  .event-overview-field dd {
+    margin: 0;
+    color: #333;
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 600px) {
+    .event-overview-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 `;

@@ -7,7 +7,7 @@ import {
   validateCreateIndividualEventInput,
   getEventMembershipId,
   buildEventDocument
-} from '../onboarding/createIndividualEvent';
+} from '../events/createIndividualEvent';
 import { ValidationError } from '../validation';
 
 describe('Organization Validation', () => {

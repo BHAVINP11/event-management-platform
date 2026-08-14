@@ -275,35 +275,6 @@ describe('DashboardService', () => {
     expect(data.organizations).toEqual([]);
   });
 
-  test('event creation is offered to organization owners, admins, and planners', async () => {
-    const { service } = buildWorld({
-      organizations: [buildOrganization({ id: 'org1' })],
-      organizationMembers: [buildOrganizationMember('org1', 'user1', { role: OrganizationRole.Planner })]
-    });
-
-    await expect(service.getDashboardData('user1', now)).resolves.toMatchObject({
-      canCreateEvent: true
-    });
-  });
-
-  test('event creation is not offered to organization staff or to individual event owners', async () => {
-    const staffWorld = buildWorld({
-      organizations: [buildOrganization({ id: 'org1' })],
-      organizationMembers: [buildOrganizationMember('org1', 'user1', { role: OrganizationRole.Staff })]
-    });
-    const individualWorld = buildWorld({
-      events: [buildEvent({ id: 'event1' })],
-      eventMembers: [buildEventMember('event1', 'user1')]
-    });
-
-    await expect(staffWorld.service.getDashboardData('user1', now)).resolves.toMatchObject({
-      canCreateEvent: false
-    });
-    await expect(individualWorld.service.getDashboardData('user1', now)).resolves.toMatchObject({
-      canCreateEvent: false
-    });
-  });
-
   test('a repository failure surfaces an application error, not an empty dashboard', async () => {
     const world = buildWorld({
       events: [buildEvent({ id: 'event1' })],

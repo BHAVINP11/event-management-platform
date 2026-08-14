@@ -182,17 +182,21 @@ Step 8 added no rule changes. `tests/firestore.rules.test.ts` covers the
 dashboard's read pattern directly, including that a user cannot list another
 user's memberships and cannot enumerate events or organizations.
 
-## 9. Future event workspace
+## 9. Event creation and the event workspace
 
-`/events/:eventId` is currently a placeholder that renders the event name, dates,
-status, type, and the user's role. The workspace itself — guests, functions,
-budgets, vendors, tasks, RSVP — is not built.
+As of Step 9, `/events/:eventId` is a real workspace shell (Overview plus
+labeled placeholders for the rest) and `/events/new` creates real events
+through trusted Cloud Functions. See [docs/events.md](events.md) for the full
+creation flow, authorization, and workspace details.
 
-`/events/new` is likewise a placeholder. The Create Event button that points at
-it is shown only to users with an active organization membership whose role is
-`owner`, `admin`, or `planner`; the underlying creation permission model is
-defined in Step 9, and the trusted backend remains the authority on creation
-regardless of what the button does.
+The dashboard's own responsibility didn't change: it still only discovers
+existing `EventMember`/`OrganizationMember` records and never persists
+anything. The **Create Event** button is shown unconditionally to every
+authenticated user — creating an individual event requires no organization
+access at all, so there is no permission left to gate the button on. Which
+creation flow (personal vs. organization, and which organization) is decided
+on `/events/new` itself, using `EventCreationService.getCreatableOrganizations`
+— the dashboard does not compute or expose that.
 
 ## Structure
 
@@ -205,10 +209,12 @@ src/features/dashboard/
   pages/DashboardPage.tsx
 
 src/features/events/
-  services/eventAccessService.ts  authorization check, then load
+  services/eventAccessService.ts    authorization check, then load
+  services/eventCreationService.ts  Cloud Function invocation + creatable-org lookup
   hooks/useEventAccess.ts
-  pages/EventWorkspacePage.tsx    placeholder
-  pages/EventCreatePage.tsx       placeholder
+  hooks/useEventCreationOrganizations.ts
+  pages/EventWorkspacePage.tsx       Overview + placeholder navigation
+  pages/EventCreatePage.tsx          individual/organization creation flow
 
 src/app/services.ts               composition root
 ```

@@ -8,32 +8,95 @@ import { resourceStyles } from '@/components/ui/resourceStyles';
 import { formatDateRange } from '@/lib/date';
 import { eventRoleLabel, eventStatusLabel, eventTypeLabel } from '@/lib/labels';
 
-function EventSummary({ event }: { event: EventDetailView }): JSX.Element {
+/**
+ * Future workspace sections. Only Overview has a real page in Step 9 — the
+ * rest are navigation placeholders so the eventual layout is visible without
+ * building their data models yet.
+ */
+const UPCOMING_WORKSPACE_SECTIONS = ['Guests', 'Functions', 'Expenses', 'Vendors', 'Tasks'];
+
+function EventWorkspaceNav(): JSX.Element {
+  return (
+    <ul className="event-nav">
+      <li className="event-nav-item active">Overview</li>
+      {UPCOMING_WORKSPACE_SECTIONS.map((section) => (
+        <li key={section} className="event-nav-item disabled">
+          {section}
+          <span className="event-nav-soon">Soon</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function EventOverview({ event }: { event: EventDetailView }): JSX.Element {
+  const dateRange = formatDateRange(event.startDate, event.endDate);
+  const venue = [event.venueName, event.venueAddress].filter(Boolean).join(' — ');
+
+  return (
+    <dl className="event-overview-grid">
+      <div className="event-overview-field">
+        <dt>Event type</dt>
+        <dd>{eventTypeLabel(event.type)}</dd>
+      </div>
+
+      <div className="event-overview-field">
+        <dt>Date</dt>
+        <dd>{dateRange ?? 'Not scheduled yet'}</dd>
+      </div>
+
+      {venue && (
+        <div className="event-overview-field">
+          <dt>Venue</dt>
+          <dd>{venue}</dd>
+        </div>
+      )}
+
+      <div className="event-overview-field">
+        <dt>Status</dt>
+        <dd>{eventStatusLabel(event.status)}</dd>
+      </div>
+
+      <div className="event-overview-field">
+        <dt>Your role</dt>
+        <dd>{eventRoleLabel(event.role)}</dd>
+      </div>
+
+      <div className="event-overview-field">
+        <dt>Organization</dt>
+        <dd>{event.organizationName ?? 'Personal event'}</dd>
+      </div>
+
+      {event.description && (
+        <div className="event-overview-field" style={{ gridColumn: '1 / -1' }}>
+          <dt>Description</dt>
+          <dd>{event.description}</dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
+/**
+ * The event workspace shell: header, section navigation, and the Overview
+ * page. Every other section is a labeled placeholder — no data model or
+ * feature behind it yet.
+ */
+function EventWorkspace({ event }: { event: EventDetailView }): JSX.Element {
   const dateRange = formatDateRange(event.startDate, event.endDate);
 
   return (
     <>
-      <h1>{event.name}</h1>
-      {dateRange && <p className="page-subtitle">{dateRange}</p>}
-
-      <div className="resource-meta" style={{ marginBottom: '2rem' }}>
-        <span className={`resource-tag status-${event.status}`}>
-          {eventStatusLabel(event.status)}
-        </span>
-        <span className="resource-tag">{eventTypeLabel(event.type)}</span>
-        <span className="resource-tag">{eventRoleLabel(event.role)}</span>
-        <span className="resource-tag">{event.organizationName ?? 'Personal event'}</span>
+      <div className="event-header">
+        <h1>{event.name}</h1>
+        <p className="page-subtitle">
+          {dateRange ?? 'Not scheduled yet'} · {eventStatusLabel(event.status)}
+        </p>
       </div>
 
-      {event.description && <p>{event.description}</p>}
+      <EventWorkspaceNav />
 
-      <div className="resource-notice">
-        <h2>Event workspace coming next</h2>
-        <p>Guests, functions, budgets, and vendors will live here.</p>
-        <Link to="/dashboard" className="btn-secondary">
-          Back to dashboard
-        </Link>
-      </div>
+      <EventOverview event={event} />
     </>
   );
 }
@@ -51,7 +114,7 @@ function EventNotice({ title, body }: { title: string; body: string }): JSX.Elem
 }
 
 /**
- * Placeholder event page.
+ * The `/events/:eventId` route.
  *
  * Access is decided by AuthorizationService before the event is read, so the
  * URL cannot be used to reach an event the user is not an active member of.
@@ -82,7 +145,7 @@ export function EventWorkspacePage(): JSX.Element {
         />
       )}
 
-      {state.status === 'allowed' && <EventSummary event={state.event} />}
+      {state.status === 'allowed' && <EventWorkspace event={state.event} />}
 
       <style>{resourceStyles}</style>
     </section>

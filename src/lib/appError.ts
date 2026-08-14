@@ -28,3 +28,19 @@ export class EventLoadError extends AppError {
     this.name = 'EventLoadError';
   }
 }
+
+/**
+ * Raised when event creation fails, whether from invalid input, denied
+ * organization access, or an infrastructure failure. `code` carries the
+ * Cloud Function's error code so the UI can special-case a handful of
+ * expected outcomes without parsing the message text.
+ */
+export class EventCreationError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'EventCreationError';
+    this.code = code;
+  }
+}

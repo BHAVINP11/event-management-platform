@@ -60,9 +60,6 @@ export class DashboardService {
         events: sortDashboardEvents(
           events.map((entry) => toEventSummary(entry, organizationNames)),
           now
-        ),
-        canCreateEvent: organizationMemberships.some((membership) =>
-          this.authorizationService.canCreateEventInOrganization(membership)
         )
       };
     } catch {

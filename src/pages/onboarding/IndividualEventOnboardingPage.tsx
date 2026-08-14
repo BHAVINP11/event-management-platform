@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createIndividualEvent, OnboardingError } from '@/features/onboarding/services/onboardingService';
+import { TIMEZONES } from '@/lib/timezones';
 
 const EVENT_TYPES = [
   { value: 'wedding', label: 'Wedding' },
@@ -8,23 +9,6 @@ const EVENT_TYPES = [
   { value: 'corporate', label: 'Corporate Event' },
   { value: 'private', label: 'Private Celebration' },
   { value: 'other', label: 'Other' }
-];
-
-const TIMEZONES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'America/Anchorage',
-  'Pacific/Honolulu',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Tokyo',
-  'Asia/Shanghai',
-  'Asia/Hong_Kong',
-  'Australia/Sydney',
-  'Australia/Melbourne'
 ];
 
 export function IndividualEventOnboardingPage(): JSX.Element {

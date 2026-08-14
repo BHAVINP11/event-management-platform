@@ -44,7 +44,7 @@ This repository is currently in the foundation and onboarding phase. It includes
 - Trusted Cloud Functions backend (Firebase)
 - Onboarding flows for event planners and individual event owners
 - A `/dashboard` that lists the organizations and events the authenticated user actively belongs to (see [docs/dashboard.md](docs/dashboard.md))
-- An authorization-checked `/events/:eventId` placeholder page, and placeholder `/events/new`
+- Trusted event creation (individual and organization events) and an authorization-checked `/events/:eventId` workspace shell with an Overview page (see [docs/events.md](docs/events.md))
 - A Not Found page
 
 ## Technology Stack

@@ -5,6 +5,7 @@ import { FirebaseEventMemberRepository } from '@/services/firebase/repositories/
 import { AuthorizationService } from '@/features/auth/services/authorizationService';
 import { DashboardService } from '@/features/dashboard/services/dashboardService';
 import { EventAccessService } from '@/features/events/services/eventAccessService';
+import { EventCreationService } from '@/features/events/services/eventCreationService';
 
 /**
  * Composition root.
@@ -35,3 +36,5 @@ export const eventAccessService = new EventAccessService(
   eventRepository,
   organizationRepository
 );
+
+export const eventCreationService = new EventCreationService(authorizationService, organizationRepository);

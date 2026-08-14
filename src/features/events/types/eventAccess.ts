@@ -8,6 +8,9 @@ export interface EventDetailView {
   description?: string;
   startDate?: string;
   endDate?: string;
+  timezone?: string;
+  venueName?: string;
+  venueAddress?: string;
   status: EventStatus;
   role: EventRole;
   organizationId: string | null;

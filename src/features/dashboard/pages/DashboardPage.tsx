@@ -35,7 +35,7 @@ export function DashboardPage(): JSX.Element {
       {state.status === 'ready' && (
         <>
           <OrganizationSection organizations={state.data.organizations} />
-          <EventSection events={state.data.events} canCreateEvent={state.data.canCreateEvent} />
+          <EventSection events={state.data.events} />
 
           {hasNothing && (
             <div className="resource-notice">

@@ -30,11 +30,9 @@ function EventCard({ event }: { event: DashboardEventSummary }): JSX.Element {
 }
 
 export function EventSection({
-  events,
-  canCreateEvent
+  events
 }: {
   events: readonly DashboardEventSummary[];
-  canCreateEvent: boolean;
 }): JSX.Element {
   const heading = events.length === 1 ? 'Your Event' : 'Your Events';
 
@@ -42,7 +40,7 @@ export function EventSection({
     <section className="resource-section">
       <div className="resource-section-header">
         <h2>{heading}</h2>
-        {canCreateEvent && events.length > 0 && (
+        {events.length > 0 && (
           <Link to="/events/new" className="btn-primary">
             + Create Event
           </Link>
@@ -52,13 +50,11 @@ export function EventSection({
       {events.length === 0 ? (
         <div className="resource-empty">
           <p>You don&apos;t have any events yet.</p>
-          {canCreateEvent && (
-            <p>
-              <Link to="/events/new" className="btn-primary">
-                + Create Event
-              </Link>
-            </p>
-          )}
+          <p>
+            <Link to="/events/new" className="btn-primary">
+              + Create Event
+            </Link>
+          </p>
         </div>
       ) : (
         <ul className="resource-list">
