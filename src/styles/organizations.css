@@ -1,0 +1,53 @@
+/**
+ * Organizations — `/organizations` and `/organizations/:organizationId`.
+ * Minimal, functional styling only; reuses `people.css`'s row/list/search
+ * classes for the members section (see OrganizationPage.tsx) rather than
+ * duplicating them.
+ */
+
+.organizations-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.organizations-page h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.organizations-subtitle {
+  margin: var(--space-1) 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.organizations-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.organizations-list-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.organizations-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.organizations-list-row h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}

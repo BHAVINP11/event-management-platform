@@ -17,9 +17,13 @@ export declare function validateCreateOrganizationEventInput(input: unknown): Cr
 /**
  * Verifies the caller may create events for the given organization.
  *
- * Loads the membership by its deterministic ID rather than trusting anything
- * the client asserted about its own access, and never trusts a role or
- * status passed from the browser — only the stored membership document.
+ * Loads the membership via the shared `loadActiveOrganizationMembership`
+ * (by its deterministic ID, never trusting anything the client asserted
+ * about its own access, and never trusting a role or status passed from
+ * the browser — only the stored membership document), then applies this
+ * function's own, broader role list — event creation additionally allows
+ * `planner`, unlike organization management (settings/members), which
+ * does not.
  *
  * @throws ValidationError('organization_not_found') if the organization does not exist
  * @throws ValidationError('organization_access_denied') if there is no active membership

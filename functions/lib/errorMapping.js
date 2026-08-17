@@ -29,7 +29,10 @@ const KNOWN_APP_CODES = {
     task_assignment_not_allowed: 'permission-denied',
     member_not_found: 'not-found',
     event_owner_cannot_be_removed: 'failed-precondition',
-    event_owner_role_immutable: 'failed-precondition'
+    event_owner_role_immutable: 'failed-precondition',
+    organization_member_not_found: 'not-found',
+    organization_owner_cannot_be_removed: 'failed-precondition',
+    organization_owner_role_immutable: 'failed-precondition'
 };
 function firebaseCodeFor(appCode) {
     if (appCode in KNOWN_APP_CODES) {

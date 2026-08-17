@@ -1,5 +1,6 @@
 import { OrganizationRepository } from '@/repositories/interfaces/organizationRepository';
 import { OrganizationMemberRepository } from '@/repositories/interfaces/organizationMemberRepository';
+import { OrganizationInvitationRepository } from '@/repositories/interfaces/organizationInvitationRepository';
 import { EventRepository } from '@/repositories/interfaces/eventRepository';
 import { EventMemberRepository } from '@/repositories/interfaces/eventMemberRepository';
 import { InvitationRepository } from '@/repositories/interfaces/invitationRepository';
@@ -14,6 +15,7 @@ import { getEventMembershipId, getOrganizationMembershipId } from '@/repositorie
 import { Organization } from '@/types/organization';
 import { Event, EventStatus, EventType } from '@/types/event';
 import { Invitation, InvitationStatus } from '@/types/invitation';
+import { OrganizationInvitation } from '@/types/organizationInvitation';
 import { User } from '@/types/user';
 import { Guest, GuestSide, GuestStatus } from '@/types/guest';
 import { EventFunction, EventFunctionStatus } from '@/types/eventFunction';
@@ -90,6 +92,18 @@ export const buildInvitation = (
   overrides: Partial<Invitation> & { id: string; eventId: string; invitedEmail: string }
 ): Invitation => ({
   role: EventRole.Family,
+  status: InvitationStatus.Pending,
+  invitedBy: 'owner1',
+  expiresAt: '2030-01-01T00:00:00.000Z',
+  createdAt: now,
+  updatedAt: now,
+  ...overrides
+});
+
+export const buildOrganizationInvitation = (
+  overrides: Partial<OrganizationInvitation> & { id: string; organizationId: string; invitedEmail: string }
+): OrganizationInvitation => ({
+  role: OrganizationRole.Planner,
   status: InvitationStatus.Pending,
   invitedBy: 'owner1',
   expiresAt: '2030-01-01T00:00:00.000Z',
@@ -272,6 +286,26 @@ export class FakeInvitationRepository implements InvitationRepository {
 
   async listPendingByEmail(email: string): Promise<Invitation[]> {
     return this.invitations.filter((i) => i.invitedEmail === email && i.status === InvitationStatus.Pending);
+  }
+
+  create = unsupported;
+  update = unsupported;
+}
+
+export class FakeOrganizationInvitationRepository implements OrganizationInvitationRepository {
+  failing = false;
+
+  constructor(private readonly invitations: readonly OrganizationInvitation[] = []) {}
+
+  async getById(invitationId: string): Promise<OrganizationInvitation | null> {
+    return this.invitations.find((i) => i.id === invitationId) ?? null;
+  }
+
+  async listByOrganization(organizationId: string): Promise<OrganizationInvitation[]> {
+    if (this.failing) {
+      throw new RepositoryInfrastructureError('Failed to list organization invitations.');
+    }
+    return this.invitations.filter((i) => i.organizationId === organizationId);
   }
 
   create = unsupported;

@@ -16,6 +16,17 @@ const eventCreationOrganizationRoles: readonly OrganizationRole[] = [
 ];
 
 /**
+ * Organization roles expected to manage the organization itself
+ * (settings, member list, invitations) — a narrower tier than
+ * `eventCreationOrganizationRoles`, which additionally allows `planner`.
+ * Used only to decide whether management entry points are offered in the
+ * UI; the trusted Cloud Functions (`updateOrganization`,
+ * `removeOrganizationMember`, `updateOrganizationMemberRole`,
+ * `createOrganizationInvitation`, ...) remain the authority.
+ */
+const organizationManagementRoles: readonly OrganizationRole[] = [OrganizationRole.Owner, OrganizationRole.Admin];
+
+/**
  * Event roles expected to invite people to an event. Used only to decide
  * which UI entry points are offered; the trusted Cloud Functions remain the
  * authority. (Guest management has its own, side-scoped authorization —
@@ -136,6 +147,16 @@ export class AuthorizationService {
       membership.status === MembershipStatus.Active &&
       eventCreationOrganizationRoles.includes(membership.role)
     );
+  }
+
+  /**
+   * Whether an organization membership implies the user may manage the
+   * organization itself (settings, members, invitations) — owner/admin
+   * only, a narrower tier than `canCreateEventInOrganization`. Pure so
+   * callers can reuse a membership they have already loaded.
+   */
+  canManageOrganization(membership: OrganizationMember): boolean {
+    return membership.status === MembershipStatus.Active && organizationManagementRoles.includes(membership.role);
   }
 
   /**

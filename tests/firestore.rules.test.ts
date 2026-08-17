@@ -122,6 +122,18 @@ const invitation = (eventId: string, invitedEmail: string, status = 'pending') =
   updatedAt: now
 });
 
+const organizationInvitation = (organizationId: string, invitedEmail: string, status = 'pending') => ({
+  id: 'org-invitation1',
+  organizationId,
+  invitedEmail,
+  role: 'planner',
+  status,
+  invitedBy: 'owner1',
+  expiresAt: '2030-01-01T00:00:00.000Z',
+  createdAt: now,
+  updatedAt: now
+});
+
 const seed = async (callback: (adminDb: RulesTestContext) => Promise<void>): Promise<void> => {
   await testEnv.withSecurityRulesDisabled(callback);
 };
@@ -385,6 +397,55 @@ describe('Firestore Security Rules', () => {
     });
   });
 
+  // The Organization Members page needs the same widening as eventMembers
+  // above: an active organization member may read a co-member's
+  // membership, gated on the caller already being an active member of
+  // that same organization.
+  describe('Organization Members page: co-member visibility', () => {
+    test('an active organization member can read a co-member\'s membership for the same organization', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user1')).set(organizationMember('org1', 'user1', 'active'));
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user2')).set(organizationMember('org1', 'user2', 'active'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user2')).get()
+      ).resolves.toBeDefined();
+    });
+
+    test('an active organization member can list every membership for that organization', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user1')).set(organizationMember('org1', 'user1', 'active'));
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user2')).set(organizationMember('org1', 'user2', 'active'));
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org2', 'user3')).set(organizationMember('org2', 'user3', 'active'));
+      });
+
+      const snapshot = await testEnv.authenticatedContext('user1').firestore().collection('organizationMembers').where('organizationId', '==', 'org1').get();
+      expect(snapshot.docs).toHaveLength(2);
+    });
+
+    test('a user cannot read a co-member\'s membership for an organization they do not belong to', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user2')).set(organizationMember('org1', 'user2', 'active'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user2')).get()
+      ).rejects.toThrow();
+    });
+
+    test('an inactive membership does not grant visibility into the organization\'s other members', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user1')).set(organizationMember('org1', 'user1', 'inactive'));
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user2')).set(organizationMember('org1', 'user2', 'active'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user2')).get()
+      ).rejects.toThrow();
+    });
+  });
+
   describe('Invitations', () => {
     test('the invited person can read their own invitation by matching authenticated email', async () => {
       await seed(async (adminDb) => adminDb.firestore().collection('invitations').doc('invitation1').set(invitation('event1', 'meena@example.com')));
@@ -449,6 +510,88 @@ describe('Firestore Security Rules', () => {
     test('client cannot create an eventMember directly, e.g. to accept an invitation without the Cloud Function', async () => {
       await expect(
         testEnv.authenticatedContext('user1').firestore().collection('eventMembers').doc(eventMembershipId('event1', 'user1')).set(eventMember('event1', 'user1', 'active'))
+      ).rejects.toThrow();
+    });
+  });
+
+  // organizationInvitations is a deliberately separate collection from
+  // invitations (event invitations) — same rule shape, independent
+  // lifecycle, mirrored 1:1 with the Invitations block above.
+  describe('Organization Invitations', () => {
+    test('the invited person can read their own invitation by matching authenticated email', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'meena@example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').get()
+      ).resolves.toBeDefined();
+    });
+
+    test('email matching is case-insensitive', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'Meena@Example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').get()
+      ).resolves.toBeDefined();
+    });
+
+    test('an authenticated user with a different email cannot read someone else\'s invitation', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user2', { email: 'stranger@example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').get()
+      ).rejects.toThrow();
+    });
+
+    test('an active member of the organization can read invitations for that organization (Members page)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'owner1')).set(organizationMember('org1', 'owner1', 'active'));
+        await adminDb.firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('owner1', { email: 'owner1@example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').get()
+      ).resolves.toBeDefined();
+
+      const snapshot = await testEnv.authenticatedContext('owner1', { email: 'owner1@example.com' }).firestore().collection('organizationInvitations').where('organizationId', '==', 'org1').get();
+      expect(snapshot.docs).toHaveLength(1);
+    });
+
+    test('a non-member with an unrelated email cannot read an organization\'s invitations', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('stranger1', { email: 'stranger@example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').get()
+      ).rejects.toThrow();
+    });
+
+    test('a member of a different organization cannot read this organization\'s invitations (isolation)', async () => {
+      await seed(async (adminDb) => {
+        await adminDb.firestore().collection('organizationMembers').doc(organizationMembershipId('org2', 'user1')).set(organizationMember('org2', 'user1', 'active'));
+        await adminDb.firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com'));
+      });
+
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'stranger@example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').get()
+      ).rejects.toThrow();
+    });
+
+    test('client cannot create an organization invitation directly', async () => {
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'owner1@example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com'))
+      ).rejects.toThrow();
+    });
+
+    test('client cannot update an organization invitation directly, e.g. to accept it themselves', async () => {
+      await seed(async (adminDb) => adminDb.firestore().collection('organizationInvitations').doc('org-invitation1').set(organizationInvitation('org1', 'meena@example.com')));
+
+      await expect(
+        testEnv.authenticatedContext('user1', { email: 'meena@example.com' }).firestore().collection('organizationInvitations').doc('org-invitation1').update({ status: 'accepted' })
+      ).rejects.toThrow();
+    });
+
+    test('client cannot create an organizationMember directly, e.g. to accept an invitation without the Cloud Function', async () => {
+      await expect(
+        testEnv.authenticatedContext('user1').firestore().collection('organizationMembers').doc(organizationMembershipId('org1', 'user1')).set(organizationMember('org1', 'user1', 'active'))
       ).rejects.toThrow();
     });
   });

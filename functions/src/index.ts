@@ -15,6 +15,14 @@ import { handleCancelInvitation } from './invitations/cancelInvitation';
 import { handleResendInvitation } from './invitations/resendInvitation';
 import { handleRemoveMember } from './members/removeMember';
 import { handleUpdateMemberRole } from './members/updateMemberRole';
+import { handleUpdateOrganization } from './organizations/updateOrganization';
+import { handleRemoveOrganizationMember } from './organizations/removeMember';
+import { handleUpdateOrganizationMemberRole } from './organizations/updateMemberRole';
+import { handleCreateOrganizationInvitation } from './organizations/createOrganizationInvitation';
+import { handleAcceptOrganizationInvitation } from './organizations/acceptOrganizationInvitation';
+import { handleGetOrganizationInvitationPreview } from './organizations/getOrganizationInvitationPreview';
+import { handleCancelOrganizationInvitation } from './organizations/cancelOrganizationInvitation';
+import { handleResendOrganizationInvitation } from './organizations/resendOrganizationInvitation';
 import { handleCreateGuest } from './guests/createGuest';
 import { handleUpdateGuest } from './guests/updateGuest';
 import { handleDeleteGuest } from './guests/deleteGuest';
@@ -170,6 +178,312 @@ export const onCreateIndividualEvent = functions.https.onCall(async (data, conte
 export const onCreateOrganizationEvent = functions.https.onCall(async (data, context) => {
   try {
     return await handleCreateOrganizationEvent(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateOrganization
+ *
+ * Updates an organization's name/description/contact details. The caller
+ * must have an active OrganizationMember with role owner or admin (a
+ * narrower tier than who may create events for the organization). `slug`
+ * and `logoUrl` are always carried over unchanged from the existing
+ * document — neither is editable in this pass.
+ *
+ * Input:
+ * {
+ *   organizationId: string,
+ *   name: string,
+ *   description?: string,
+ *   contactEmail?: string,
+ *   contactPhone?: string
+ * }
+ *
+ * Output:
+ * {
+ *   organizationId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - organization_not_found: Organization does not exist
+ * - organization_access_denied: Caller has no active membership in the organization
+ * - organization_role_not_allowed: Caller's role cannot manage the organization
+ * - internal_error: Server error
+ */
+export const onUpdateOrganization = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateOrganization(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: removeOrganizationMember
+ *
+ * Removes a member from an organization. The caller must have an active
+ * OrganizationMember with role owner or admin. Marks the membership
+ * `revoked` rather than deleting it, mirroring `removeMember` (the event
+ * domain's equivalent); this has no effect on the member's event
+ * memberships, events they created, or their Firebase Auth account. The
+ * organization owner can never be removed.
+ *
+ * Input:
+ * {
+ *   organizationId: string,
+ *   userId: string
+ * }
+ *
+ * Output:
+ * {
+ *   organizationId: string,
+ *   userId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - organization_not_found: Organization does not exist
+ * - organization_access_denied: Caller has no active membership in the organization
+ * - organization_role_not_allowed: Caller's role cannot manage members
+ * - organization_member_not_found: The target membership does not exist
+ * - organization_owner_cannot_be_removed: The target is the organization owner
+ * - internal_error: Server error
+ */
+export const onRemoveOrganizationMember = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleRemoveOrganizationMember(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateOrganizationMemberRole
+ *
+ * Changes a member's role. The caller must have an active
+ * OrganizationMember with role owner or admin. Reuses the same role
+ * vocabulary as createOrganizationInvitation — a member can never be
+ * changed to role `owner` this way. The organization owner's own role
+ * can never be changed.
+ *
+ * Input:
+ * {
+ *   organizationId: string,
+ *   userId: string,
+ *   role: string ('admin' | 'planner' | 'staff')
+ * }
+ *
+ * Output:
+ * {
+ *   organizationId: string,
+ *   userId: string,
+ *   role: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_role)
+ * - organization_not_found: Organization does not exist
+ * - organization_access_denied: Caller has no active membership in the organization
+ * - organization_role_not_allowed: Caller's role cannot manage members
+ * - organization_member_not_found: The target membership does not exist
+ * - organization_owner_role_immutable: The target is the organization owner
+ * - internal_error: Server error
+ */
+export const onUpdateOrganizationMemberRole = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateOrganizationMemberRole(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: createOrganizationInvitation
+ *
+ * Invites a person to an organization. The caller must have an active
+ * OrganizationMember with role owner or admin. Creates a pending
+ * OrganizationInvitation only; no OrganizationMember is created until the
+ * invitation is accepted. A deliberately separate collection/lifecycle
+ * from event invitations — the two domains are conceptually independent.
+ *
+ * Input:
+ * {
+ *   organizationId: string,
+ *   invitedEmail: string,
+ *   role: string ('admin' | 'planner' | 'staff')
+ * }
+ *
+ * Output:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - organization_not_found: Organization does not exist
+ * - organization_access_denied: Caller has no active membership in the organization
+ * - organization_role_not_allowed: Caller's role cannot invite people
+ * - invitation_already_pending: A pending invitation already exists for this organization + email
+ * - internal_error: Server error
+ */
+export const onCreateOrganizationInvitation = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleCreateOrganizationInvitation(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: acceptOrganizationInvitation
+ *
+ * Accepts a pending organization invitation and creates the invitee's
+ * OrganizationMember (deterministic ID
+ * `organizationMembers/{organizationId}_{userId}`), copying role and
+ * invitedBy from the invitation. The invitation is marked accepted in
+ * the same atomic write.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   organizationId: string,
+ *   membershipId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation does not exist
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - invitation_expired: Invitation's expiresAt has passed
+ * - invitation_email_mismatch: Caller's authenticated email does not match invitedEmail
+ * - internal_error: Server error
+ */
+export const onAcceptOrganizationInvitation = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleAcceptOrganizationInvitation(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: getOrganizationInvitationPreview
+ *
+ * Read-only projection for the `/organization-invitations/:invitationId`
+ * acceptance page: the organization's name plus the invitation's own
+ * fields. Gated by the same email-match check as acceptance, and does
+ * not require organization membership — that would defeat the point,
+ * since the invitee doesn't have it yet.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   organizationName: string,
+ *   invitedEmail: string,
+ *   role: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation (or its organization) does not exist
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - invitation_expired: Invitation's expiresAt has passed
+ * - invitation_email_mismatch: Caller's authenticated email does not match invitedEmail
+ * - internal_error: Server error
+ */
+export const onGetOrganizationInvitationPreview = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleGetOrganizationInvitationPreview(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: cancelOrganizationInvitation
+ *
+ * Cancels a pending organization invitation. The caller must have an
+ * active OrganizationMember with role owner or admin for the
+ * invitation's own organization. Only a `pending` invitation can be
+ * cancelled.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation does not exist
+ * - organization_access_denied: Caller has no active membership in the invitation's organization
+ * - organization_role_not_allowed: Caller's role cannot manage invitations
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - internal_error: Server error
+ */
+export const onCancelOrganizationInvitation = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleCancelOrganizationInvitation(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: resendOrganizationInvitation
+ *
+ * Extends a pending organization invitation's `expiresAt` by another 14
+ * days on the same document — there is no email-sending infrastructure
+ * in this codebase, so this keeps the existing invitation link valid
+ * rather than dispatching a new email. Works even if the invitation
+ * already passed its old `expiresAt`. Only a `pending` invitation can be
+ * resent.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   invitationId: string,
+ *   expiresAt: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation does not exist
+ * - organization_access_denied: Caller has no active membership in the invitation's organization
+ * - organization_role_not_allowed: Caller's role cannot manage invitations
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - internal_error: Server error
+ */
+export const onResendOrganizationInvitation = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleResendOrganizationInvitation(db, data, context);
   } catch (error) {
     throw toHttpsError(error);
   }

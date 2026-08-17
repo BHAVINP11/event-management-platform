@@ -79,6 +79,23 @@ export class MemberError extends AppError {
 }
 
 /**
+ * Raised when reading/writing an organization's details, members, or
+ * invitations fails, whether from invalid input, denied organization
+ * access/role, a missing organization/member/invitation, an attempt to
+ * act on the organization owner, or an infrastructure failure. `code`
+ * carries the Cloud Function's error code where one applies.
+ */
+export class OrganizationError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'OrganizationError';
+    this.code = code;
+  }
+}
+
+/**
  * Raised when creating or accepting an invitation fails, whether from
  * invalid input, denied event access, an expired/mismatched invitation, or
  * an infrastructure failure. `code` carries the Cloud Function's error code.

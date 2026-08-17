@@ -1,5 +1,6 @@
 import { FirebaseOrganizationRepository } from '@/services/firebase/repositories/firebaseOrganizationRepository';
 import { FirebaseOrganizationMemberRepository } from '@/services/firebase/repositories/firebaseOrganizationMemberRepository';
+import { FirebaseOrganizationInvitationRepository } from '@/services/firebase/repositories/firebaseOrganizationInvitationRepository';
 import { FirebaseEventRepository } from '@/services/firebase/repositories/firebaseEventRepository';
 import { FirebaseEventMemberRepository } from '@/services/firebase/repositories/firebaseEventMemberRepository';
 import { FirebaseInvitationRepository } from '@/services/firebase/repositories/firebaseInvitationRepository';
@@ -17,6 +18,11 @@ import { EventSettingsService } from '@/features/events/services/eventSettingsSe
 import { EventPeopleService } from '@/features/events/services/eventPeopleService';
 import { InvitationService } from '@/features/events/services/invitationService';
 import { MemberManagementService } from '@/features/events/services/memberManagementService';
+import { OrganizationAccessService } from '@/features/organizations/services/organizationAccessService';
+import { OrganizationPeopleService } from '@/features/organizations/services/organizationPeopleService';
+import { OrganizationSettingsService } from '@/features/organizations/services/organizationSettingsService';
+import { OrganizationMemberManagementService } from '@/features/organizations/services/organizationMemberManagementService';
+import { OrganizationInvitationService } from '@/features/organizations/services/organizationInvitationService';
 import { GuestService } from '@/features/events/services/guestService';
 import { FunctionService } from '@/features/events/services/functionService';
 import { ExpenseService } from '@/features/events/services/expenseService';
@@ -33,6 +39,7 @@ import { TaskService } from '@/features/events/services/taskService';
 
 const organizationRepository = new FirebaseOrganizationRepository();
 const organizationMemberRepository = new FirebaseOrganizationMemberRepository();
+const organizationInvitationRepository = new FirebaseOrganizationInvitationRepository();
 const eventRepository = new FirebaseEventRepository();
 const eventMemberRepository = new FirebaseEventMemberRepository();
 const invitationRepository = new FirebaseInvitationRepository();
@@ -75,6 +82,22 @@ export const eventPeopleService = new EventPeopleService(
 export const invitationService = new InvitationService();
 
 export const memberManagementService = new MemberManagementService();
+
+export const organizationAccessService = new OrganizationAccessService(authorizationService, organizationRepository);
+
+export const organizationPeopleService = new OrganizationPeopleService(
+  authorizationService,
+  organizationRepository,
+  organizationMemberRepository,
+  organizationInvitationRepository,
+  userRepository
+);
+
+export const organizationSettingsService = new OrganizationSettingsService();
+
+export const organizationMemberManagementService = new OrganizationMemberManagementService();
+
+export const organizationInvitationService = new OrganizationInvitationService();
 
 export const guestService = new GuestService(authorizationService, eventRepository, guestRepository);
 

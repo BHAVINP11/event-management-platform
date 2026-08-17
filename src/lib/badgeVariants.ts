@@ -4,7 +4,7 @@ import { EventFunctionStatus } from '@/types/eventFunction';
 import { PaymentStatus } from '@/types/expense';
 import { VendorStatus } from '@/types/vendor';
 import { TaskStatus, TaskPriority } from '@/types/task';
-import { EventRole, MembershipStatus } from '@/types/membership';
+import { EventRole, MembershipStatus, OrganizationRole } from '@/types/membership';
 import { InvitationStatus } from '@/types/invitation';
 import { BadgeVariant } from '@/components/ui/Badge';
 
@@ -88,6 +88,17 @@ const eventRoleBadgeVariants: Record<EventRole, BadgeVariant> = {
 };
 
 export const eventRoleBadgeVariant = (role: EventRole): BadgeVariant => eventRoleBadgeVariants[role];
+
+/** Which Badge variant represents each organization membership role. */
+const organizationRoleBadgeVariants: Record<OrganizationRole, BadgeVariant> = {
+  [OrganizationRole.Owner]: 'accent',
+  [OrganizationRole.Admin]: 'accent',
+  [OrganizationRole.Planner]: 'neutral',
+  [OrganizationRole.Staff]: 'neutral'
+};
+
+export const organizationRoleBadgeVariant = (role: OrganizationRole): BadgeVariant =>
+  organizationRoleBadgeVariants[role];
 
 /** Which Badge variant represents each event membership status. */
 const membershipStatusBadgeVariants: Record<MembershipStatus, BadgeVariant> = {

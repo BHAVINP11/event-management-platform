@@ -1,5 +1,5 @@
 import { ValidationError } from '../validation';
-import { getOrganizationMembershipId } from '../shared/membershipIds';
+import { loadActiveOrganizationMembership } from '../shared/organizationAuthority';
 import {
   CallableAuthContext,
   EventCreationFields,
@@ -53,9 +53,13 @@ export function validateCreateOrganizationEventInput(input: unknown): CreateOrga
 /**
  * Verifies the caller may create events for the given organization.
  *
- * Loads the membership by its deterministic ID rather than trusting anything
- * the client asserted about its own access, and never trusts a role or
- * status passed from the browser — only the stored membership document.
+ * Loads the membership via the shared `loadActiveOrganizationMembership`
+ * (by its deterministic ID, never trusting anything the client asserted
+ * about its own access, and never trusting a role or status passed from
+ * the browser — only the stored membership document), then applies this
+ * function's own, broader role list — event creation additionally allows
+ * `planner`, unlike organization management (settings/members), which
+ * does not.
  *
  * @throws ValidationError('organization_not_found') if the organization does not exist
  * @throws ValidationError('organization_access_denied') if there is no active membership
@@ -66,28 +70,7 @@ export async function verifyOrganizationEventCreationAccess(
   organizationId: string,
   userId: string
 ): Promise<void> {
-  const organizationSnapshot = await db.collection('organizations').doc(organizationId).get();
-  if (!organizationSnapshot.exists) {
-    throw new ValidationError('organization_not_found', 'Organization not found.');
-  }
-
-  const membershipId = getOrganizationMembershipId(organizationId, userId);
-  const membershipSnapshot = await db.collection('organizationMembers').doc(membershipId).get();
-  const membership = membershipSnapshot.data() as
-    | { organizationId?: string; status?: string; role?: string }
-    | undefined;
-
-  // The deterministic ID already ties the membership document to this
-  // organization; the field is checked too rather than trusted implicitly,
-  // matching how firestore.rules independently verifies the same field.
-  if (
-    !membershipSnapshot.exists ||
-    !membership ||
-    membership.organizationId !== organizationId ||
-    membership.status !== 'active'
-  ) {
-    throw new ValidationError('organization_access_denied', 'You do not have access to this organization.');
-  }
+  const membership = await loadActiveOrganizationMembership(db, organizationId, userId);
 
   if (!membership.role || !ALLOWED_ORGANIZATION_EVENT_CREATION_ROLES.includes(membership.role)) {
     throw new ValidationError(

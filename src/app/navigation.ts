@@ -55,6 +55,7 @@ export function getTopLevelNavSections(): NavSection[] {
     {
       items: [
         { label: 'Dashboard', to: '/dashboard', icon: IconGrid },
+        { label: 'Organization', to: '/organizations', icon: IconBriefcase },
         { label: 'Profile', to: '/profile', icon: IconUser }
       ]
     }

@@ -84,11 +84,13 @@ service cloud.firestore {
     }
 
     // Organization membership rules
-    // organizationMembers/{membershipId} — user can read their own memberships
+    // organizationMembers/{membershipId} — user can read their own
+    // memberships, and (for the Organization Members page) any membership
+    // belonging to an organization they are themselves an active member
+    // of. Mirrors eventMembers' identical widening.
     match /organizationMembers/{membershipId} {
-      // User may read only if userId in document matches authenticated user
-      allow read: if isAuthenticated() && 
-        resource.data.userId == getCurrentUserId();
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == getCurrentUserId() || isActiveOrganizationMember(resource.data.organizationId));
 
       // Deny all writes (membership creation/management is server-side only)
       allow write: if false;
@@ -126,6 +128,26 @@ service cloud.firestore {
 
       // Deny all writes (invitation creation/acceptance is server-side only,
       // via createInvitation / acceptInvitation Cloud Functions)
+      allow write: if false;
+    }
+
+    // Organization invitation rules
+    // organizationInvitations/{invitationId} — the invitee (matched by
+    // their authenticated email) may read their own invitation; any active
+    // member of the organization may read invitations for that
+    // organization (Organization Members page). A deliberately separate
+    // collection from `invitations` (event invitations) — organization
+    // and event invitations are independent lifecycles, matching how
+    // `organizationMembers`/`eventMembers` are already independent
+    // collections rather than one shared membership model.
+    match /organizationInvitations/{invitationId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.invitedEmail == request.auth.token.email.lower() ||
+         isActiveOrganizationMember(resource.data.organizationId));
+
+      // Deny all writes (invitation creation/acceptance is server-side
+      // only, via createOrganizationInvitation / acceptOrganizationInvitation
+      // Cloud Functions)
       allow write: if false;
     }
 

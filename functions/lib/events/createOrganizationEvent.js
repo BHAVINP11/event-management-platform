@@ -5,7 +5,7 @@ exports.verifyOrganizationEventCreationAccess = verifyOrganizationEventCreationA
 exports.createOrganizationEvent = createOrganizationEvent;
 exports.handleCreateOrganizationEvent = handleCreateOrganizationEvent;
 const validation_1 = require("../validation");
-const membershipIds_1 = require("../shared/membershipIds");
+const organizationAuthority_1 = require("../shared/organizationAuthority");
 const shared_1 = require("./shared");
 /**
  * Organization roles allowed to create events on behalf of an organization.
@@ -32,31 +32,20 @@ function validateCreateOrganizationEventInput(input) {
 /**
  * Verifies the caller may create events for the given organization.
  *
- * Loads the membership by its deterministic ID rather than trusting anything
- * the client asserted about its own access, and never trusts a role or
- * status passed from the browser — only the stored membership document.
+ * Loads the membership via the shared `loadActiveOrganizationMembership`
+ * (by its deterministic ID, never trusting anything the client asserted
+ * about its own access, and never trusting a role or status passed from
+ * the browser — only the stored membership document), then applies this
+ * function's own, broader role list — event creation additionally allows
+ * `planner`, unlike organization management (settings/members), which
+ * does not.
  *
  * @throws ValidationError('organization_not_found') if the organization does not exist
  * @throws ValidationError('organization_access_denied') if there is no active membership
  * @throws ValidationError('organization_role_not_allowed') if the role cannot create events
  */
 async function verifyOrganizationEventCreationAccess(db, organizationId, userId) {
-    const organizationSnapshot = await db.collection('organizations').doc(organizationId).get();
-    if (!organizationSnapshot.exists) {
-        throw new validation_1.ValidationError('organization_not_found', 'Organization not found.');
-    }
-    const membershipId = (0, membershipIds_1.getOrganizationMembershipId)(organizationId, userId);
-    const membershipSnapshot = await db.collection('organizationMembers').doc(membershipId).get();
-    const membership = membershipSnapshot.data();
-    // The deterministic ID already ties the membership document to this
-    // organization; the field is checked too rather than trusted implicitly,
-    // matching how firestore.rules independently verifies the same field.
-    if (!membershipSnapshot.exists ||
-        !membership ||
-        membership.organizationId !== organizationId ||
-        membership.status !== 'active') {
-        throw new validation_1.ValidationError('organization_access_denied', 'You do not have access to this organization.');
-    }
+    const membership = await (0, organizationAuthority_1.loadActiveOrganizationMembership)(db, organizationId, userId);
     if (!membership.role || !ALLOWED_ORGANIZATION_EVENT_CREATION_ROLES.includes(membership.role)) {
         throw new validation_1.ValidationError('organization_role_not_allowed', 'Your role does not allow creating events for this organization.');
     }

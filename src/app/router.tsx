@@ -6,6 +6,9 @@ import { LoginPage } from '@/pages/public/LoginPage';
 import { SignupPage } from '@/pages/public/SignupPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { ProfilePage } from '@/features/auth/pages/ProfilePage';
+import { OrganizationsIndexPage } from '@/features/organizations/pages/OrganizationsIndexPage';
+import { OrganizationPage } from '@/features/organizations/pages/OrganizationPage';
+import { OrganizationInvitationAcceptPage } from '@/features/organizations/pages/OrganizationInvitationAcceptPage';
 import { EventWorkspacePage } from '@/features/events/pages/EventWorkspacePage';
 import { EventCreatePage } from '@/features/events/pages/EventCreatePage';
 import { EventPeoplePage } from '@/features/events/pages/EventPeoplePage';
@@ -37,6 +40,9 @@ export function AppRouter(): JSX.Element {
             sent through login/signup with a way back to this exact URL,
             which the page itself handles (see InvitationAcceptPage). */}
         <Route path="/invitations/:invitationId" element={<InvitationAcceptPage />} />
+        {/* Not wrapped in ProtectedRoute, for the same reason as
+            /invitations/:invitationId above. */}
+        <Route path="/organization-invitations/:invitationId" element={<OrganizationInvitationAcceptPage />} />
         <Route path="/404" element={<NotFoundPage />} />
       </Route>
 
@@ -48,6 +54,8 @@ export function AppRouter(): JSX.Element {
       <Route element={<AppShell />}>
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/organizations" element={<ProtectedRoute><OrganizationsIndexPage /></ProtectedRoute>} />
+        <Route path="/organizations/:organizationId" element={<ProtectedRoute><OrganizationPage /></ProtectedRoute>} />
         <Route path="/events/:eventId" element={<ProtectedRoute><EventWorkspacePage /></ProtectedRoute>} />
         <Route path="/events/:eventId/people" element={<ProtectedRoute><EventPeoplePage /></ProtectedRoute>} />
         <Route path="/events/:eventId/guests" element={<ProtectedRoute><GuestsPage /></ProtectedRoute>} />

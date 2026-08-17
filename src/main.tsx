@@ -17,6 +17,7 @@ import '@/styles/people.css';
 import '@/styles/event-creation.css';
 import '@/styles/invitation-accept.css';
 import '@/styles/profile.css';
+import '@/styles/organizations.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
