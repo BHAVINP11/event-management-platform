@@ -20,7 +20,8 @@
   font-family: inherit;
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast),
+    transform var(--transition-elevate), box-shadow var(--transition-elevate);
   white-space: nowrap;
 }
 
@@ -56,14 +57,19 @@
 .btn--primary {
   background: var(--color-accent);
   color: var(--color-text-on-accent);
+  box-shadow: 0 1px 2px rgba(188, 63, 86, 0.25);
 }
 
 .btn--primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(188, 63, 86, 0.28);
 }
 
 .btn--primary:active:not(:disabled) {
   background: var(--color-accent-active);
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(188, 63, 86, 0.25);
 }
 
 .btn--secondary {
@@ -74,6 +80,7 @@
 
 .btn--secondary:hover:not(:disabled) {
   background: var(--color-surface-sunken);
+  border-color: var(--color-text-subtle);
 }
 
 .btn--ghost {
@@ -135,6 +142,43 @@
   border-color: var(--color-danger);
 }
 
+.field-control-group {
+  position: relative;
+}
+
+.field-control-group .field-control {
+  padding-right: 2.75rem;
+}
+
+.field-control-adornment {
+  position: absolute;
+  right: var(--space-1);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+}
+
+.field-toggle-visibility {
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.field-toggle-visibility:hover {
+  color: var(--color-text);
+}
+
+.field-toggle-visibility:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .field-hint {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
@@ -159,12 +203,14 @@
 }
 
 .card--interactive {
-  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+  transition: box-shadow var(--transition-elevate), border-color var(--transition-elevate),
+    transform var(--transition-elevate);
 }
 
 .card--interactive:hover {
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   border-color: var(--color-border-strong);
+  transform: translateY(-2px);
 }
 
 /* Badge */
@@ -274,6 +320,34 @@
   box-shadow: var(--shadow-focus);
 }
 
+/**
+ * A trigger styled like a primary Button (e.g. the Event Overview
+ * hero's "+ Add" menu) — a dedicated modifier rather than reusing `.btn
+ * .btn--primary` classes directly, since those would lose to
+ * `.dropdown-trigger`'s own background/padding/color rules further down
+ * this same cascade.
+ */
+.dropdown-trigger--primary {
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: var(--font-weight-medium);
+  box-shadow: 0 1px 2px rgba(188, 63, 86, 0.25);
+  transition: background var(--transition-fast), transform var(--transition-elevate), box-shadow var(--transition-elevate);
+}
+
+.dropdown-trigger--primary svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dropdown-trigger--primary:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(188, 63, 86, 0.28);
+}
+
 .dropdown-menu {
   position: absolute;
   right: 0;
@@ -285,6 +359,20 @@
   box-shadow: var(--shadow-md);
   padding: var(--space-2);
   z-index: var(--z-dropdown);
+  animation: dropdown-menu-in var(--transition-elevate) both;
+}
+
+@keyframes dropdown-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-menu {
+    animation: none;
+  }
 }
 
 .dropdown-menu--left {
@@ -319,11 +407,32 @@
 .dropdown-menu-item:hover,
 .dropdown-menu-item:focus-visible {
   background: var(--color-surface-sunken);
+}
+
+.dropdown-menu-item:focus-visible {
   outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .dropdown-menu-item--danger {
   color: var(--color-danger);
+}
+
+.dropdown-menu-item--disabled {
+  color: var(--color-text-subtle);
+  cursor: default;
+  pointer-events: none;
+}
+
+.dropdown-menu-item-soon {
+  margin-left: auto;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-subtle);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-full);
 }
 
 /* Modal */
@@ -331,12 +440,13 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(42, 37, 33, 0.4);
+  background: rgba(33, 29, 34, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
   z-index: var(--z-modal-backdrop);
+  animation: modal-backdrop-in var(--transition-base) both;
 }
 
 .modal-panel {
@@ -349,6 +459,27 @@
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
   z-index: var(--z-modal);
+  animation: modal-panel-in var(--transition-elevate) both;
+}
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop,
+  .modal-panel {
+    animation: none;
+  }
 }
 
 .modal-header {
@@ -453,6 +584,20 @@
   box-shadow: var(--shadow-md);
   font-size: var(--font-size-sm);
   color: var(--color-text);
+  animation: toast-in var(--transition-elevate) both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
 }
 
 .toast--success {
@@ -494,9 +639,9 @@
   text-align: center;
   gap: var(--space-3);
   padding: var(--space-12) var(--space-6);
-  border: 1px dashed var(--color-border-strong);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface-sunken);
+  background: linear-gradient(180deg, var(--color-lavender-tint) 0%, var(--color-surface) 65%);
 }
 
 .empty-state-title {
@@ -509,6 +654,30 @@
 .empty-state-description {
   margin: 0;
   max-width: 40ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ErrorState */
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.error-state-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.error-state-message {
+  margin: 0;
+  max-width: 48ch;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }

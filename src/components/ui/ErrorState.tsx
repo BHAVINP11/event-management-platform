@@ -1,3 +1,6 @@
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+
 /**
  * Friendly failure state with a retry affordance.
  *
@@ -12,12 +15,10 @@ export function ErrorState({
   onRetry: () => void;
 }): JSX.Element {
   return (
-    <div className="resource-notice" role="alert">
-      <h2>Something went wrong</h2>
-      <p>{message}</p>
-      <button type="button" className="btn-primary" onClick={onRetry}>
-        Try Again
-      </button>
-    </div>
+    <Card padded className="error-state" role="alert">
+      <p className="error-state-title">Something went wrong</p>
+      <p className="error-state-message">{message}</p>
+      <Button onClick={onRetry}>Try Again</Button>
+    </Card>
   );
 }

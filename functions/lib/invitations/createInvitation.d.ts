@@ -9,6 +9,13 @@ export interface CreateInvitationOutput {
 interface AuthContext {
     uid: string;
 }
+/**
+ * How long a new invitation remains acceptable. Not client-configurable.
+ * Exported for reuse by `resendInvitation`, which extends an existing
+ * invitation's `expiresAt` by the same amount rather than duplicating
+ * this constant.
+ */
+export declare const INVITATION_EXPIRY_DAYS = 14;
 export declare function validateCreateInvitationInput(input: unknown): CreateInvitationInput;
 /**
  * Rejects a second pending invitation for the same event + email.

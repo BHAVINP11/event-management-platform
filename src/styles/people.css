@@ -1,0 +1,163 @@
+/**
+ * People + Invitations — `/events/:eventId/people`. Members and pending
+ * invitations are both fairly tabular (name/email, role, status, a date),
+ * so both get a dense scannable row list, matching the Guests page rather
+ * than a card grid — collapsing to stacked cards on narrow screens.
+ */
+
+.people-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.people-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.people-header h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.people-subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.people-search {
+  max-width: 360px;
+  margin: var(--space-6) 0;
+}
+
+.people-section {
+  margin-bottom: var(--space-8);
+}
+
+.people-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.people-section-header h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.people-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.person-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.person-row-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.invitation-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.invitation-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.person-row-primary h3,
+.invitation-row-primary h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.person-row-field,
+.invitation-row-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.person-row-field-label,
+.invitation-row-field-label {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .invitation-row {
+    grid-template-columns: 2fr 1fr 1fr auto;
+  }
+
+  .invitation-row-field--sent,
+  .invitation-row-field--expires {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .person-row,
+  .invitation-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: var(--space-3);
+  }
+
+  .person-row-field,
+  .invitation-row-field {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .person-row-field-label,
+  .invitation-row-field-label {
+    display: inline;
+    color: var(--color-text-subtle);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .invitation-row-field--sent,
+  .invitation-row-field--expires {
+    display: flex;
+  }
+
+  .person-row-actions,
+  .invitation-row-actions {
+    justify-content: flex-start;
+  }
+
+  .people-header .btn {
+    width: 100%;
+  }
+}

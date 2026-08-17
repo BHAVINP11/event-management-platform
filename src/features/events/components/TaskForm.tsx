@@ -4,6 +4,9 @@ import { AssignableMember, TaskFormInput } from '@/features/events/types/tasks';
 import { Task, TaskPriority, TaskStatus } from '@/types/task';
 import { taskPriorityLabel, taskStatusLabel } from '@/lib/labels';
 import { TaskError } from '@/lib/appError';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const PRIORITY_OPTIONS = Object.values(TaskPriority).map((priority) => ({
   value: priority,
@@ -43,14 +46,15 @@ const toInput = (fields: TaskFormFields): TaskFormInput => ({
 });
 
 /**
- * Add/edit task form. Only mounted for users who may create/edit this
- * task (owner/planner always; staff only when editing a task already
- * assigned to themselves — see `canEditTask` in `taskAuthorization.ts`).
- * `assignedTo` only ever offers `assignableMembers` — active EventMembers
- * of this event, never Guests — and createTask/updateTask independently
- * re-verify the chosen assignee server-side regardless. `eventId`/
- * `createdBy`/`id`/`createdAt` are never part of this form; the Cloud
- * Function derives or preserves them itself.
+ * Add/edit task form — the content of the Modal that hosts it. Only
+ * mounted for users who may create/edit this task (owner/planner always;
+ * staff only when editing a task already assigned to themselves — see
+ * `canUpdateTask` in `taskAuthorization.ts`). `assignedTo` only ever
+ * offers `assignableMembers` — active EventMembers of this event, never
+ * Guests — and createTask/updateTask independently re-verify the chosen
+ * assignee server-side regardless. `eventId`/`createdBy`/`id`/`createdAt`
+ * are never part of this form; the Cloud Function derives or preserves
+ * them itself.
  */
 export function TaskForm({
   eventId,
@@ -62,7 +66,7 @@ export function TaskForm({
   eventId: string;
   task?: Task;
   assignableMembers: readonly AssignableMember[];
-  onSaved: () => void;
+  onSaved: (message: string) => void;
   onCancel: () => void;
 }): JSX.Element {
   const [fields, setFields] = useState<TaskFormFields>(toFields(task));
@@ -85,10 +89,11 @@ export function TaskForm({
       const input = toInput(fields);
       if (task) {
         await taskService.updateTask(task.id, input);
+        onSaved('Task updated.');
       } else {
         await taskService.createTask(eventId, input);
+        onSaved('Task added.');
       }
-      onSaved();
     } catch (err) {
       setError(err instanceof TaskError ? err.friendlyMessage : "We couldn't save this task right now.");
       setSubmitting(false);
@@ -96,27 +101,23 @@ export function TaskForm({
   };
 
   return (
-    <form className="event-form" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
-      {error && <div className="form-error">{error}</div>}
+    <form onSubmit={handleSubmit}>
+      {error && (
+        <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {error}
+        </div>
+      )}
 
-      <div className="form-group">
-        <label htmlFor="task-title">Title *</label>
-        <input
-          id="task-title"
-          name="title"
-          type="text"
-          value={fields.title}
-          onChange={handleChange}
-          required
-          disabled={submitting}
-        />
-      </div>
+      <Input label="Title *" name="title" value={fields.title} onChange={handleChange} required disabled={submitting} />
 
-      <div className="form-group">
-        <label htmlFor="task-description">Description</label>
+      <div className="field" style={{ marginTop: 'var(--space-4)' }}>
+        <label className="field-label" htmlFor="task-description">
+          Description
+        </label>
         <textarea
           id="task-description"
           name="description"
+          className="field-control"
           rows={2}
           value={fields.description}
           onChange={handleChange}
@@ -124,69 +125,54 @@ export function TaskForm({
         />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="task-due-date">Due Date</label>
-          <input
-            id="task-due-date"
-            name="dueDate"
-            type="date"
-            value={fields.dueDate}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="task-priority">Priority</label>
-          <select id="task-priority" name="priority" value={fields.priority} onChange={handleChange} disabled={submitting}>
-            {PRIORITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Due Date"
+          name="dueDate"
+          type="date"
+          value={fields.dueDate}
+          onChange={handleChange}
+          disabled={submitting}
+        />
+        <Select
+          label="Priority"
+          name="priority"
+          value={fields.priority}
+          onChange={handleChange}
+          disabled={submitting}
+          options={PRIORITY_OPTIONS}
+        />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="task-assigned-to">Assigned To</label>
-          <select
-            id="task-assigned-to"
-            name="assignedTo"
-            value={fields.assignedTo}
-            onChange={handleChange}
-            disabled={submitting}
-          >
-            <option value="">Unassigned</option>
-            {assignableMembers.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="task-status">Status</label>
-          <select id="task-status" name="status" value={fields.status} onChange={handleChange} disabled={submitting}>
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Select
+          label="Assigned To"
+          name="assignedTo"
+          value={fields.assignedTo}
+          onChange={handleChange}
+          disabled={submitting}
+          options={[
+            { value: '', label: 'Unassigned' },
+            ...assignableMembers.map((member) => ({ value: member.userId, label: member.label }))
+          ]}
+        />
+        <Select
+          label="Status"
+          name="status"
+          value={fields.status}
+          onChange={handleChange}
+          disabled={submitting}
+          options={STATUS_OPTIONS}
+        />
       </div>
 
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
+      <div className="auth-form-actions">
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>
           Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
+        </Button>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : task ? 'Save Changes' : 'Add Task'}
-        </button>
+        </Button>
       </div>
     </form>
   );

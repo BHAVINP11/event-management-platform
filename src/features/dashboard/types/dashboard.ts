@@ -31,6 +31,13 @@ export interface DashboardEventSummary {
    * otherwise — an event membership never implies organization membership.
    */
   organizationName: string | null;
+  /**
+   * Projected straight from the already-loaded Event document (see
+   * `DashboardService.loadEvents`) — surfacing these costs no additional
+   * read, since the full event is fetched regardless.
+   */
+  venueName?: string;
+  venueAddress?: string;
 }
 
 export interface DashboardData {

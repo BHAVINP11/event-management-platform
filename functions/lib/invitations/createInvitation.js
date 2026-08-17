@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.INVITATION_EXPIRY_DAYS = void 0;
 exports.validateCreateInvitationInput = validateCreateInvitationInput;
 exports.assertNoDuplicatePendingInvitation = assertNoDuplicatePendingInvitation;
 exports.createInvitation = createInvitation;
@@ -7,8 +8,13 @@ exports.handleCreateInvitation = handleCreateInvitation;
 const validation_1 = require("../validation");
 const eventAuthority_1 = require("../shared/eventAuthority");
 const shared_1 = require("./shared");
-/** How long a new invitation remains acceptable. Not client-configurable. */
-const INVITATION_EXPIRY_DAYS = 14;
+/**
+ * How long a new invitation remains acceptable. Not client-configurable.
+ * Exported for reuse by `resendInvitation`, which extends an existing
+ * invitation's `expiresAt` by the same amount rather than duplicating
+ * this constant.
+ */
+exports.INVITATION_EXPIRY_DAYS = 14;
 function validateCreateInvitationInput(input) {
     if (!input || typeof input !== 'object') {
         throw new validation_1.ValidationError('invalid_input', 'Input must be an object.');
@@ -48,7 +54,7 @@ async function createInvitation(db, auth, input) {
     await assertNoDuplicatePendingInvitation(db, input.eventId, input.invitedEmail);
     const now = new Date();
     const nowIso = now.toISOString();
-    const expiresAt = new Date(now.getTime() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(now.getTime() + exports.INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
     const invitationRef = db.collection('invitations').doc();
     const invitationId = invitationRef.id;
     await invitationRef.set((0, shared_1.buildInvitationDocument)(invitationId, input.eventId, userId, input, nowIso, expiresAt));

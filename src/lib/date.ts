@@ -40,3 +40,22 @@ export const formatDateRange = (
 
   return start ?? end;
 };
+
+/**
+ * Whether an ISO date string (e.g. a task's `dueDate`) falls strictly
+ * before today, in the viewer's local calendar — not UTC. Compares
+ * `YYYY-MM-DD` prefixes directly rather than `Date` timestamps, so a
+ * negative UTC offset near midnight can't misclassify today as overdue.
+ */
+export const isBeforeToday = (value: string | undefined | null): boolean => {
+  if (!parseIsoDate(value) || !value) {
+    return false;
+  }
+
+  const now = new Date();
+  const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+    now.getDate()
+  ).padStart(2, '0')}`;
+
+  return value.slice(0, 10) < todayLocal;
+};

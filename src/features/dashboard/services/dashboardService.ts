@@ -131,6 +131,8 @@ const toEventSummary = (
     organizationId,
     // Only names the user is already entitled to see are resolved. Event
     // membership on its own never grants organization access.
-    organizationName: organizationId ? (organizationNames.get(organizationId) ?? null) : null
+    organizationName: organizationId ? (organizationNames.get(organizationId) ?? null) : null,
+    venueName: event.venueName,
+    venueAddress: event.venueAddress
   };
 };

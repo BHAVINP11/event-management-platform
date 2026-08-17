@@ -1,0 +1,57 @@
+/**
+ * Profile — `/profile`. A single card: avatar + name/phone form. Deliberately
+ * minimal, matching the feature's own scope (no password/email management).
+ */
+
+.profile-page {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.profile-page h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.profile-subtitle {
+  margin: var(--space-1) 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.profile-avatar-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.profile-avatar-preview {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-placeholder {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-subtle);
+}
+
+.profile-avatar-actions {
+  display: flex;
+  gap: var(--space-2);
+}

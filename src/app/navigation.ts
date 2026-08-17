@@ -19,9 +19,25 @@
  *   dedicated view, without producing a dead link today.
  */
 
+import { ComponentType } from 'react';
+import {
+  IconBriefcase,
+  IconCalendar,
+  IconCheckSquare,
+  IconCompass,
+  IconGrid,
+  IconProps,
+  IconReceipt,
+  IconUser,
+  IconUserPlus,
+  IconUsers,
+  IconWallet
+} from '@/components/ui/icons';
+
 export interface NavItem {
   label: string;
   to: string;
+  icon: ComponentType<IconProps>;
   /** Rendered disabled with a "Soon" badge instead of a working link. */
   comingSoon?: boolean;
   /** Exact-match only — needed for an item whose path is a prefix of a sibling's (e.g. Overview vs. Guests). */
@@ -38,8 +54,8 @@ export function getTopLevelNavSections(): NavSection[] {
   return [
     {
       items: [
-        { label: 'Dashboard', to: '/dashboard' },
-        { label: 'Profile', to: '/profile', comingSoon: true }
+        { label: 'Dashboard', to: '/dashboard', icon: IconGrid },
+        { label: 'Profile', to: '/profile', icon: IconUser }
       ]
     }
   ];
@@ -51,14 +67,14 @@ export function getEventWorkspaceNavSections(eventId: string): NavSection[] {
     {
       title: 'Event',
       items: [
-        { label: 'Overview', to: `/events/${eventId}`, end: true },
-        { label: 'People', to: `/events/${eventId}/people` },
-        { label: 'Guests', to: `/events/${eventId}/guests` },
-        { label: 'Functions', to: `/events/${eventId}/functions` },
-        { label: 'Budget', to: `/events/${eventId}/budget`, comingSoon: true },
-        { label: 'Expenses', to: `/events/${eventId}/expenses` },
-        { label: 'Vendors', to: `/events/${eventId}/vendors` },
-        { label: 'Tasks', to: `/events/${eventId}/tasks` }
+        { label: 'Overview', to: `/events/${eventId}`, icon: IconCompass, end: true },
+        { label: 'People', to: `/events/${eventId}/people`, icon: IconUsers },
+        { label: 'Guests', to: `/events/${eventId}/guests`, icon: IconUserPlus },
+        { label: 'Functions', to: `/events/${eventId}/functions`, icon: IconCalendar },
+        { label: 'Budget', to: `/events/${eventId}/budget`, icon: IconWallet, comingSoon: true },
+        { label: 'Expenses', to: `/events/${eventId}/expenses`, icon: IconReceipt },
+        { label: 'Vendors', to: `/events/${eventId}/vendors`, icon: IconBriefcase },
+        { label: 'Tasks', to: `/events/${eventId}/tasks`, icon: IconCheckSquare }
       ]
     }
   ];

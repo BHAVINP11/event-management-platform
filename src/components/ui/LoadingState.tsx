@@ -4,10 +4,9 @@ export interface LoadingStateProps {
 }
 
 /**
- * A generic inline spinner + label — for a modal, a panel, or any small
- * area waiting on data. For a full resource page's initial load, prefer
- * `LoadingSkeleton`, which mirrors the shape of the content about to
- * appear rather than showing an indeterminate spinner.
+ * A generic inline spinner + label — for a modal, a panel, or a full
+ * page's initial load alike. Every data-driven page in the app uses this
+ * for its loading state.
  */
 export function LoadingState({ label = 'Loading…', size = 'md' }: LoadingStateProps): JSX.Element {
   return (

@@ -46,6 +46,39 @@ export class EventCreationError extends AppError {
 }
 
 /**
+ * Raised when editing an event's details, status, or cover photo fails,
+ * whether from invalid input, denied event access/role, a missing event,
+ * or an infrastructure failure. `code` carries the Cloud Function's error
+ * code where one applies.
+ */
+export class EventSettingsError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'EventSettingsError';
+    this.code = code;
+  }
+}
+
+/**
+ * Raised when removing a member or changing their role/side fails,
+ * whether from invalid input, denied event access/role, a missing
+ * member, an attempt to act on the event owner, or an infrastructure
+ * failure. `code` carries the Cloud Function's error code where one
+ * applies.
+ */
+export class MemberError extends AppError {
+  readonly code: string;
+
+  constructor(code: string, friendlyMessage: string) {
+    super(friendlyMessage);
+    this.name = 'MemberError';
+    this.code = code;
+  }
+}
+
+/**
  * Raised when creating or accepting an invitation fails, whether from
  * invalid input, denied event access, an expired/mismatched invitation, or
  * an infrastructure failure. `code` carries the Cloud Function's error code.

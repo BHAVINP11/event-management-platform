@@ -6,9 +6,15 @@ import {
 } from './onboarding/createOrganization';
 import { handleCreateIndividualEvent } from './events/createIndividualEvent';
 import { handleCreateOrganizationEvent } from './events/createOrganizationEvent';
+import { handleUpdateEvent } from './events/updateEvent';
+import { handleUpdateEventCoverImage } from './events/updateEventCoverImage';
 import { handleCreateInvitation } from './invitations/createInvitation';
 import { handleAcceptInvitation } from './invitations/acceptInvitation';
 import { handleGetInvitationPreview } from './invitations/getInvitationPreview';
+import { handleCancelInvitation } from './invitations/cancelInvitation';
+import { handleResendInvitation } from './invitations/resendInvitation';
+import { handleRemoveMember } from './members/removeMember';
+import { handleUpdateMemberRole } from './members/updateMemberRole';
 import { handleCreateGuest } from './guests/createGuest';
 import { handleUpdateGuest } from './guests/updateGuest';
 import { handleDeleteGuest } from './guests/deleteGuest';
@@ -32,6 +38,7 @@ import { mapErrorToCallableResponse } from './errorMapping';
 admin.initializeApp();
 
 const db = admin.firestore();
+const bucket = admin.storage().bucket();
 
 /**
  * Converts any error thrown by a callable's business logic into the
@@ -169,6 +176,95 @@ export const onCreateOrganizationEvent = functions.https.onCall(async (data, con
 });
 
 /**
+ * Callable Cloud Function: updateEvent
+ *
+ * Edits an event's name/type/description/dates/timezone/venue/status. The
+ * caller must have an active EventMember with role owner or planner. A full
+ * document replacement (not a partial patch), so clearing an optional field
+ * (e.g. removing a venue) actually removes it. `budgetAmount` and
+ * `coverImageUrl` are always carried over unchanged from the existing
+ * document — they have their own dedicated update functions
+ * (`updateEventBudget`, `updateEventCoverImage`) and are never touched here.
+ * `organizationId`, `createdBy`, and `createdAt` are always read from the
+ * existing document, never trusted from the client.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   name: string,
+ *   type: string (EventType),
+ *   description?: string,
+ *   startDate: string (ISO 8601),
+ *   endDate?: string (ISO 8601),
+ *   timezone: string,
+ *   venueName?: string,
+ *   venueAddress?: string,
+ *   status: string ('draft' | 'active' | 'completed' | 'archived')
+ * }
+ *
+ * Output:
+ * {
+ *   eventId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_status)
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot edit the event
+ * - internal_error: Server error
+ */
+export const onUpdateEvent = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateEvent(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateEventCoverImage
+ *
+ * Sets or removes an event's cover photo. The caller must have an active
+ * EventMember with role owner or planner. The client uploads the file to
+ * Storage directly (gated by `storage.rules`) and calls this function only
+ * to persist the resulting download URL — or `null` to remove it — onto
+ * the event document; the URL must reference this event's own
+ * `event-covers/{eventId}/` Storage folder. Replacing or removing a
+ * previous cover image deletes the old Storage object (best-effort, and
+ * scoped strictly to this event's own folder) so it doesn't become an
+ * orphaned file.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   coverImageUrl: string | null
+ * }
+ *
+ * Output:
+ * {
+ *   eventId: string,
+ *   coverImageUrl: string | null
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_cover_image_url)
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot edit the event
+ * - internal_error: Server error
+ */
+export const onUpdateEventCoverImage = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateEventCoverImage(db, bucket, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
  * Callable Cloud Function: createInvitation
  *
  * Invites a person to an event. The caller must have an active EventMember
@@ -275,6 +371,161 @@ export const onAcceptInvitation = functions.https.onCall(async (data, context) =
 export const onGetInvitationPreview = functions.https.onCall(async (data, context) => {
   try {
     return await handleGetInvitationPreview(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: cancelInvitation
+ *
+ * Cancels a pending invitation. The caller must have an active
+ * EventMember with role owner or planner for the invitation's own event.
+ * Only a `pending` invitation can be cancelled; an already accepted
+ * membership, or an already cancelled/expired invitation, is untouched.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation does not exist
+ * - event_access_denied: Caller has no active membership in the invitation's event
+ * - event_role_not_allowed: Caller's role cannot manage invitations
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - internal_error: Server error
+ */
+export const onCancelInvitation = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleCancelInvitation(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: resendInvitation
+ *
+ * Extends a pending invitation's `expiresAt` by another 14 days on the
+ * same document — there is no email-sending infrastructure in this
+ * codebase, so this keeps the existing invitation link valid rather than
+ * dispatching a new email. Works even if the invitation already passed
+ * its old `expiresAt`. Only a `pending` invitation can be resent.
+ *
+ * Input:
+ * {
+ *   invitationId: string
+ * }
+ *
+ * Output:
+ * {
+ *   invitationId: string,
+ *   expiresAt: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_invitation_id: Input validation error
+ * - invitation_not_found: Invitation does not exist
+ * - event_access_denied: Caller has no active membership in the invitation's event
+ * - event_role_not_allowed: Caller's role cannot manage invitations
+ * - invitation_not_pending: Invitation was already accepted/cancelled
+ * - internal_error: Server error
+ */
+export const onResendInvitation = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleResendInvitation(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: removeMember
+ *
+ * Removes a member from an event. The caller must have an active
+ * EventMember with role owner or planner. Marks the membership `revoked`
+ * rather than deleting it, so task assignments and audit history
+ * referencing the user are preserved; Firestore rules already require an
+ * `active` membership for event-scoped reads, so this alone fully revokes
+ * access. The event owner can never be removed.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   userId: string
+ * }
+ *
+ * Output:
+ * {
+ *   eventId: string,
+ *   userId: string
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage members
+ * - member_not_found: The target membership does not exist
+ * - event_owner_cannot_be_removed: The target is the event owner
+ * - internal_error: Server error
+ */
+export const onRemoveMember = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleRemoveMember(db, data, context);
+  } catch (error) {
+    throw toHttpsError(error);
+  }
+});
+
+/**
+ * Callable Cloud Function: updateMemberRole
+ *
+ * Changes a member's role and/or side. The caller must have an active
+ * EventMember with role owner or planner. Reuses the same role/side
+ * vocabulary and validation as createInvitation — a member can never be
+ * changed to role `owner` this way, and a side may only be set for
+ * couple/family roles. The event owner's own role can never be changed.
+ *
+ * Input:
+ * {
+ *   eventId: string,
+ *   userId: string,
+ *   role: string ('couple' | 'family' | 'planner' | 'staff' | 'viewer'),
+ *   side?: string ('bride' | 'groom', only for role couple/family)
+ * }
+ *
+ * Output:
+ * {
+ *   eventId: string,
+ *   userId: string,
+ *   role: string,
+ *   side: string | null
+ * }
+ *
+ * Errors (`error.details.appCode`, alongside a standard `error.code`):
+ * - unauthenticated: Caller is not authenticated
+ * - invalid_*: Input validation error (including invalid_role, invalid_side)
+ * - event_not_found: Event does not exist
+ * - event_access_denied: Caller has no active membership in the event
+ * - event_role_not_allowed: Caller's role cannot manage members
+ * - member_not_found: The target membership does not exist
+ * - event_owner_role_immutable: The target is the event owner
+ * - internal_error: Server error
+ */
+export const onUpdateMemberRole = functions.https.onCall(async (data, context) => {
+  try {
+    return await handleUpdateMemberRole(db, data, context);
   } catch (error) {
     throw toHttpsError(error);
   }

@@ -151,3 +151,14 @@ export const vendorCategoryLabel = (category: VendorCategory): string => vendorC
 export const vendorStatusLabel = (status: VendorStatus): string => vendorStatusLabels[status];
 export const taskStatusLabel = (status: TaskStatus): string => taskStatusLabels[status];
 export const taskPriorityLabel = (priority: TaskPriority): string => taskPriorityLabels[priority];
+
+/**
+ * The user's relationship to an event, for identity contexts (shell
+ * sidebar/header) — richer than `eventRoleLabel` alone: "Bride · Couple"
+ * rather than just "Bride", since here the role itself (not just the
+ * side) is worth keeping visible. Only Couple combines with a side today;
+ * every other role (including Family, which can also carry a side)
+ * displays as its plain role label.
+ */
+export const eventRoleIdentityLabel = (role: EventRole, side: EventMemberSide | null | undefined): string =>
+  role === EventRole.Couple && side ? `${eventMemberSideLabel(side)} · ${eventRoleLabel(role)}` : eventRoleLabel(role);

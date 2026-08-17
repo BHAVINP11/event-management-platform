@@ -1,0 +1,159 @@
+/**
+ * Guest management — `/events/:eventId/guests`. A productivity tool: a
+ * dense, scannable row list on desktop that collapses into stacked cards
+ * on narrow screens, never a horizontally-scrolling table.
+ */
+
+.guests-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.guests-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.guests-header h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.guests-subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.guests-count {
+  margin: var(--space-6) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.guests-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.guests-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.guests-status-filter {
+  width: 200px;
+}
+
+.guests-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.guest-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.guest-row-primary h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.guest-row-primary p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.guest-row-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.guest-row-field-label {
+  display: none;
+}
+
+.guest-row-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-self: end;
+}
+
+.guest-confirm-body {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 1023px) {
+  .guest-row {
+    grid-template-columns: 2fr 1fr 1fr auto;
+  }
+
+  .guest-row-field--relation {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .guest-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: var(--space-3);
+  }
+
+  .guest-row-field {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .guest-row-field-label {
+    display: inline;
+    color: var(--color-text-subtle);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .guest-row-field--relation {
+    display: flex;
+  }
+
+  .guest-row-actions {
+    justify-self: start;
+  }
+
+  .guests-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .guests-status-filter {
+    width: 100%;
+  }
+
+  .guests-header .btn {
+    width: 100%;
+  }
+}

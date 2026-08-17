@@ -1,10 +1,14 @@
 /**
- * Application shell — AppHeader, Sidebar, AppShell layout grid.
+ * Application shell — AppHeader, global Sidebar, EventNav, AppShell
+ * layout grid.
  *
- * Desktop (>= 1024px): fixed header + fixed sidebar + scrolling content,
- * as a CSS grid. Tablet/mobile (< 1024px): the sidebar becomes an
- * off-canvas drawer opened from the header's menu button, never a
- * squeezed-down desktop sidebar.
+ * Desktop (>= 1024px): fixed header + fixed dark-plum sidebar (global nav
+ * only — Dashboard/Profile) + scrolling content, as a CSS grid. Once
+ * inside an event, `EventNav` renders as a horizontal strip at the top of
+ * the content area — the workspace's own primary navigation, deliberately
+ * louder than the now-minimal sidebar. Tablet/mobile (< 1024px): the
+ * sidebar becomes an off-canvas drawer opened from the header's menu
+ * button, never a squeezed-down desktop sidebar.
  */
 
 .app-shell {
@@ -16,6 +20,7 @@
     'sidebar header'
     'sidebar main';
   background: var(--color-bg);
+  transition: grid-template-columns var(--transition-base);
 }
 
 .app-shell--collapsed {
@@ -34,6 +39,11 @@
   grid-area: main;
   min-width: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell-content {
   padding: var(--space-8) var(--space-6);
 }
 
@@ -49,7 +59,7 @@
      and is no longer part of document flow, so its wrapper needs no
      special grid placement on mobile — it simply stops taking up a
      grid track once 'sidebar' is removed from grid-template-areas above. */
-  .app-shell-main {
+  .app-shell-content {
     padding: var(--space-6) var(--space-4);
   }
 }
@@ -69,19 +79,22 @@
 
 .app-header-start {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
   min-width: 0;
 }
 
 .app-header-menu-button {
   display: none;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   padding: var(--space-2);
   cursor: pointer;
   color: var(--color-text);
+  align-self: center;
 }
 
 .app-header-menu-button:focus-visible {
@@ -90,15 +103,16 @@
 }
 
 .app-header-brand {
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-base);
-  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
 .app-header-context {
-  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
   font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -107,6 +121,7 @@
 .app-header-context::before {
   content: '/';
   margin-right: var(--space-3);
+  font-weight: var(--font-weight-regular);
   color: var(--color-border-strong);
 }
 
@@ -117,10 +132,31 @@
   flex-shrink: 0;
 }
 
+.app-header-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.app-header-user-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  max-width: 160px;
+}
+
 .app-header-user-name {
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text);
-  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-user-role {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -141,21 +177,191 @@
 }
 
 @media (max-width: 639px) {
-  .app-header-user-name {
+  .app-header-user-text {
     display: none;
   }
 }
 
-/* Sidebar */
+/* Event Workspace header — the hero (identity) and EventNav (navigation)
+   share one sticky, rounded container so they read as a single control
+   area rather than two unrelated pieces. Persists across every event
+   page, not just Overview. A simple `position: sticky` on the whole
+   two-row unit, not a scroll-triggered compact state — the hero's own
+   padding was trimmed (see event-overview.css) so the always-visible
+   header stays reasonably sized without needing that complexity. */
+
+.event-workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg);
+  padding: var(--space-6) var(--space-6) 0;
+}
+
+.event-workspace-card {
+  max-width: 960px;
+  margin: 0 auto;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-plum);
+  overflow: hidden;
+}
+
+@media (max-width: 639px) {
+  .event-workspace-header {
+    padding: var(--space-4) var(--space-4) 0;
+  }
+}
+
+/* EventNav — the primary in-event navigation; the card's bottom row */
+
+.event-nav {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: 0 var(--space-6);
+}
+
+.event-nav-list {
+  display: flex;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.event-nav-list::-webkit-scrollbar {
+  display: none;
+}
+
+.event-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.event-nav-link-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.event-nav-link:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.event-nav-link:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.event-nav-link--active {
+  background: var(--color-accent-tint);
+  color: var(--color-accent-active);
+}
+
+.event-nav-link--disabled {
+  color: var(--color-text-subtle);
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+}
+
+.event-nav-link-soon {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-subtle);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-full);
+}
+
+@media (max-width: 639px) {
+  .event-nav {
+    padding: 0 var(--space-4);
+  }
+}
+
+/* Sidebar — global navigation only (Dashboard/Profile); deliberately
+   minimal so it never competes with EventNav. */
 
 .sidebar {
+  position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface-sunken);
-  border-right: 1px solid var(--color-border);
-  padding: var(--space-4);
+  background: var(--color-plum);
+  color: var(--color-text-on-plum);
+  overflow: visible;
+}
+
+/* The collapse toggle's own header row — a normal in-flow element, not a
+   floating control, so it never overlaps the main content or looks
+   stapled onto the sidebar as an afterthought. Desktop only: at
+   mobile/tablet widths the sidebar is a full drawer, so there is nothing
+   to collapse. */
+.sidebar-top {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-plum-border);
+  flex-shrink: 0;
+}
+
+.app-shell--collapsed .sidebar-top {
+  justify-content: center;
+}
+
+.sidebar-collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--color-plum-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-on-plum-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-elevate);
+}
+
+.sidebar-collapse-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-collapse-toggle:hover {
+  color: var(--color-text-on-plum);
+  background: var(--color-plum-elevated);
+}
+
+.sidebar-collapse-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus-on-plum);
+}
+
+@media (min-width: 1024px) {
+  .sidebar-top {
+    display: flex;
+  }
+}
+
+.sidebar-nav-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  padding: var(--space-4) var(--space-3);
 }
 
 .sidebar-section {
@@ -167,9 +373,9 @@
   margin-bottom: var(--space-2);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-subtle);
+  color: var(--color-text-on-plum-muted);
 }
 
 .app-shell--collapsed .sidebar-section-title {
@@ -191,29 +397,40 @@
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-on-plum-muted);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
+.sidebar-link-icon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
 .sidebar-link:hover {
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--color-plum-elevated);
+  color: var(--color-text-on-plum);
 }
 
 .sidebar-link:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus);
+  box-shadow: var(--shadow-focus-on-plum);
 }
 
 .sidebar-link--active {
-  background: var(--color-accent-tint);
-  color: var(--color-accent-active);
+  background: var(--color-plum-elevated);
+  color: var(--color-text-on-plum);
+}
+
+.sidebar-link--active .sidebar-link-icon {
+  color: var(--color-accent);
 }
 
 .sidebar-link--disabled {
-  color: var(--color-text-subtle);
+  color: var(--color-text-on-plum-muted);
+  opacity: 0.6;
   cursor: default;
   pointer-events: none;
 }
@@ -235,35 +452,11 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  background: var(--color-surface);
-  color: var(--color-text-subtle);
+  background: var(--color-plum-elevated);
+  color: var(--color-text-on-plum-muted);
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-full);
   flex-shrink: 0;
-}
-
-.sidebar-collapse-toggle {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  background: transparent;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-  font-family: inherit;
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-}
-
-.sidebar-collapse-toggle:hover {
-  background: var(--color-surface);
-}
-
-.sidebar-collapse-toggle:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
 }
 
 /* Mobile drawer */
@@ -277,7 +470,7 @@
     width: 280px;
     max-width: 80vw;
     z-index: var(--z-mobile-nav);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-plum);
     transform: translateX(-100%);
     transition: transform var(--transition-base);
   }
@@ -291,7 +484,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(42, 37, 33, 0.4);
+    background: rgba(33, 29, 34, 0.45);
     z-index: calc(var(--z-mobile-nav) - 1);
   }
 

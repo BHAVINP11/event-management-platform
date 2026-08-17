@@ -65,8 +65,11 @@ export class EventAccessService {
           venueAddress: event.venueAddress,
           status: event.status,
           role: membership.role,
+          side: membership.side,
           organizationId,
-          organizationName: await this.resolveOrganizationName(userId, organizationId)
+          organizationName: await this.resolveOrganizationName(userId, organizationId),
+          budgetAmount: event.budgetAmount,
+          coverImageUrl: event.coverImageUrl
         }
       };
     } catch (error) {

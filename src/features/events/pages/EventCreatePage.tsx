@@ -9,13 +9,17 @@ import { EventType } from '@/types/event';
 import { eventTypeLabel } from '@/lib/labels';
 import { TIMEZONES, detectTimezone } from '@/lib/timezones';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
-import { resourceStyles } from '@/components/ui/resourceStyles';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const EVENT_TYPE_OPTIONS = Object.values(EventType).map((type) => ({
   value: type,
   label: eventTypeLabel(type)
 }));
+
+const TIMEZONE_OPTIONS = TIMEZONES.map((tz) => ({ value: tz, label: tz }));
 
 type CreationTarget =
   | { kind: 'individual' }
@@ -72,7 +76,7 @@ function EntryChoice({
   return (
     <>
       <h1>Create an event</h1>
-      <p className="page-subtitle">Who is this event for?</p>
+      <p className="event-creation-subtitle">Who is this event for?</p>
       <div className="creation-options">
         <button type="button" className="creation-option" onClick={onChooseIndividual}>
           <h3>My own event</h3>
@@ -101,7 +105,7 @@ function OrganizationSelector({
   return (
     <>
       <h1>Choose an organization</h1>
-      <p className="page-subtitle">Which organization is this event for?</p>
+      <p className="event-creation-subtitle">Which organization is this event for?</p>
       <ul className="org-select-list">
         {organizations.map((organization) => (
           <li key={organization.organizationId} className="org-select-item">
@@ -119,13 +123,11 @@ function OrganizationSelector({
           </li>
         ))}
       </ul>
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onBack}>
+      <div className="auth-form-actions">
+        <Button variant="secondary" onClick={onBack}>
           Back
-        </button>
-        <button
-          type="button"
-          className="btn-primary"
+        </Button>
+        <Button
           disabled={!selectedId}
           onClick={() => {
             const organization = organizations.find((o) => o.organizationId === selectedId);
@@ -135,7 +137,7 @@ function OrganizationSelector({
           }}
         >
           Continue
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -155,14 +157,14 @@ function EventForm({
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ): void => {
-    const { name, value } = e.target;
+    const { name, value } = event.target;
     setFields((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: FormEvent): Promise<void> => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent): Promise<void> => {
+    event.preventDefault();
     setError(null);
     setSubmitting(true);
 
@@ -183,68 +185,61 @@ function EventForm({
   return (
     <>
       <h1>Create an event</h1>
-      <p className="page-subtitle">
+      <p className="event-creation-subtitle">
         {target.kind === 'organization' ? `For ${target.organizationName}` : 'A few basics to get started'}
       </p>
 
-      <form className="event-form" onSubmit={handleSubmit}>
-        {error && <div className="form-error">{error}</div>}
+      <form onSubmit={handleSubmit}>
+        {error && (
+          <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+            {error}
+          </div>
+        )}
 
-        <div className="form-group">
-          <label htmlFor="name">Event name *</label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            placeholder="e.g., Sarah &amp; Mike's Wedding"
-            value={fields.name}
+        <Input
+          label="Event name *"
+          name="name"
+          placeholder="e.g., Sarah & Mike's Wedding"
+          value={fields.name}
+          onChange={handleChange}
+          required
+          disabled={submitting}
+        />
+
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <Select
+            label="Event type *"
+            name="type"
+            value={fields.type}
+            onChange={handleChange}
+            disabled={submitting}
+            options={EVENT_TYPE_OPTIONS}
+          />
+        </div>
+
+        <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+          <Input
+            label="Start date *"
+            name="startDate"
+            type="datetime-local"
+            value={fields.startDate}
             onChange={handleChange}
             required
             disabled={submitting}
           />
+          <Select
+            label="Timezone *"
+            name="timezone"
+            value={fields.timezone}
+            onChange={handleChange}
+            disabled={submitting}
+            options={TIMEZONE_OPTIONS}
+          />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="type">Event type *</label>
-          <select id="type" name="type" value={fields.type} onChange={handleChange} disabled={submitting}>
-            {EVENT_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="startDate">Start date *</label>
-            <input
-              id="startDate"
-              name="startDate"
-              type="datetime-local"
-              value={fields.startDate}
-              onChange={handleChange}
-              required
-              disabled={submitting}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="timezone">Timezone *</label>
-            <select id="timezone" name="timezone" value={fields.timezone} onChange={handleChange} disabled={submitting}>
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="endDate">End date</label>
-          <input
-            id="endDate"
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <Input
+            label="End date"
             name="endDate"
             type="datetime-local"
             value={fields.endDate}
@@ -253,39 +248,33 @@ function EventForm({
           />
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="venueName">Venue name</label>
-            <input
-              id="venueName"
-              name="venueName"
-              type="text"
-              placeholder="e.g., Grand Ballroom"
-              value={fields.venueName}
-              onChange={handleChange}
-              disabled={submitting}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="venueAddress">Venue address</label>
-            <input
-              id="venueAddress"
-              name="venueAddress"
-              type="text"
-              placeholder="e.g., 123 Main St"
-              value={fields.venueAddress}
-              onChange={handleChange}
-              disabled={submitting}
-            />
-          </div>
+        <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+          <Input
+            label="Venue name"
+            name="venueName"
+            placeholder="e.g., Grand Ballroom"
+            value={fields.venueName}
+            onChange={handleChange}
+            disabled={submitting}
+          />
+          <Input
+            label="Venue address"
+            name="venueAddress"
+            placeholder="e.g., 123 Main St"
+            value={fields.venueAddress}
+            onChange={handleChange}
+            disabled={submitting}
+          />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="description">Description</label>
+        <div className="field" style={{ marginTop: 'var(--space-4)' }}>
+          <label className="field-label" htmlFor="event-description">
+            Description
+          </label>
           <textarea
-            id="description"
+            id="event-description"
             name="description"
+            className="field-control"
             rows={3}
             value={fields.description}
             onChange={handleChange}
@@ -293,15 +282,15 @@ function EventForm({
           />
         </div>
 
-        <div className="form-actions">
+        <div className="auth-form-actions">
           {onBack && (
-            <button type="button" className="btn-secondary" onClick={onBack} disabled={submitting}>
+            <Button type="button" variant="secondary" onClick={onBack} disabled={submitting}>
               Back
-            </button>
+            </Button>
           )}
-          <button type="submit" className="btn-primary" disabled={submitting}>
+          <Button type="submit" disabled={submitting}>
             {submitting ? 'Creating…' : 'Create Event'}
-          </button>
+          </Button>
         </div>
       </form>
     </>
@@ -325,18 +314,16 @@ export function EventCreatePage(): JSX.Element {
 
   if (state.status === 'loading') {
     return (
-      <section className="resource-page">
-        <LoadingSkeleton cards={1} />
-        <style>{resourceStyles}</style>
+      <section className="event-creation-page">
+        <LoadingState label="Loading…" />
       </section>
     );
   }
 
   if (state.status === 'error') {
     return (
-      <section className="resource-page">
+      <section className="event-creation-page">
         <ErrorState message={state.message} onRetry={reload} />
-        <style>{resourceStyles}</style>
       </section>
     );
   }
@@ -349,7 +336,7 @@ export function EventCreatePage(): JSX.Element {
   const onCreated = (eventId: string): void => navigate(`/events/${eventId}`);
 
   return (
-    <section className="resource-page">
+    <section className="event-creation-page">
       {currentStage.name === 'entry' && (
         <EntryChoice
           onChooseIndividual={() => setStage({ name: 'form', target: { kind: 'individual' } })}
@@ -394,8 +381,6 @@ export function EventCreatePage(): JSX.Element {
           onCreated={onCreated}
         />
       )}
-
-      <style>{resourceStyles}</style>
     </section>
   );
 }

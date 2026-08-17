@@ -4,6 +4,9 @@ import { ExpenseFormInput } from '@/features/events/types/expenses';
 import { Expense, ExpenseCategory, PaymentStatus } from '@/types/expense';
 import { expenseCategoryLabel, paymentStatusLabel } from '@/lib/labels';
 import { ExpenseError } from '@/lib/appError';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const CATEGORY_OPTIONS = Object.values(ExpenseCategory).map((category) => ({
   value: category,
@@ -46,14 +49,14 @@ const toInput = (fields: ExpenseFormFields): ExpenseFormInput => ({
 });
 
 /**
- * Add/edit expense form. Only mounted for users with `canManage`
- * (owner/planner) — createExpense/updateExpense independently re-verify
- * the role server-side regardless. Paid Amount only appears when Payment
- * Status is "Partially Paid" — for Unpaid/Paid, the server derives the
- * correct paidAmount itself (0 or the full amount) regardless of what this
- * form would otherwise send. `eventId`/`createdBy`/`id`/`createdAt` are
- * never part of this form; the Cloud Function derives or preserves them
- * itself.
+ * Add/edit expense form — the content of the Modal that hosts it. Only
+ * mounted for users with `canManage` (owner/planner) — createExpense/
+ * updateExpense independently re-verify the role server-side regardless.
+ * Paid Amount only appears when Payment Status is "Partially Paid" — for
+ * Unpaid/Paid, the server derives the correct paidAmount itself (0 or the
+ * full amount) regardless of what this form would otherwise send.
+ * `eventId`/`createdBy`/`id`/`createdAt` are never part of this form; the
+ * Cloud Function derives or preserves them itself.
  */
 export function ExpenseForm({
   eventId,
@@ -63,7 +66,7 @@ export function ExpenseForm({
 }: {
   eventId: string;
   expense?: Expense;
-  onSaved: () => void;
+  onSaved: (message: string) => void;
   onCancel: () => void;
 }): JSX.Element {
   const [fields, setFields] = useState<ExpenseFormFields>(toFields(expense));
@@ -86,10 +89,11 @@ export function ExpenseForm({
       const input = toInput(fields);
       if (expense) {
         await expenseService.updateExpense(expense.id, input);
+        onSaved('Expense updated.');
       } else {
         await expenseService.createExpense(eventId, input);
+        onSaved('Expense added.');
       }
-      onSaved();
     } catch (err) {
       setError(err instanceof ExpenseError ? err.friendlyMessage : "We couldn't save this expense right now.");
       setSubmitting(false);
@@ -97,96 +101,64 @@ export function ExpenseForm({
   };
 
   return (
-    <form className="event-form" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
-      {error && <div className="form-error">{error}</div>}
+    <form onSubmit={handleSubmit}>
+      {error && (
+        <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {error}
+        </div>
+      )}
 
-      <div className="form-group">
-        <label htmlFor="expense-title">Title *</label>
-        <input
-          id="expense-title"
-          name="title"
-          type="text"
-          value={fields.title}
+      <Input label="Title *" name="title" value={fields.title} onChange={handleChange} required disabled={submitting} />
+
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Select
+          label="Category *"
+          name="category"
+          value={fields.category}
+          onChange={handleChange}
+          disabled={submitting}
+          options={CATEGORY_OPTIONS}
+        />
+        <Input
+          label="Amount *"
+          name="amount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={fields.amount}
           onChange={handleChange}
           required
           disabled={submitting}
         />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="expense-category">Category *</label>
-          <select
-            id="expense-category"
-            name="category"
-            value={fields.category}
-            onChange={handleChange}
-            disabled={submitting}
-          >
-            {CATEGORY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="expense-amount">Amount *</label>
-          <input
-            id="expense-amount"
-            name="amount"
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Select
+          label="Payment Status"
+          name="paymentStatus"
+          value={fields.paymentStatus}
+          onChange={handleChange}
+          disabled={submitting}
+          options={STATUS_OPTIONS}
+        />
+        {fields.paymentStatus === PaymentStatus.PartiallyPaid && (
+          <Input
+            label="Paid Amount *"
+            name="paidAmount"
             type="number"
-            min="0.01"
+            min="0"
             step="0.01"
-            value={fields.amount}
+            value={fields.paidAmount}
             onChange={handleChange}
             required
             disabled={submitting}
           />
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="expense-payment-status">Payment Status</label>
-          <select
-            id="expense-payment-status"
-            name="paymentStatus"
-            value={fields.paymentStatus}
-            onChange={handleChange}
-            disabled={submitting}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {fields.paymentStatus === PaymentStatus.PartiallyPaid && (
-          <div className="form-group">
-            <label htmlFor="expense-paid-amount">Paid Amount *</label>
-            <input
-              id="expense-paid-amount"
-              name="paidAmount"
-              type="number"
-              min="0"
-              step="0.01"
-              value={fields.paidAmount}
-              onChange={handleChange}
-              required
-              disabled={submitting}
-            />
-          </div>
         )}
       </div>
 
-      <div className="form-group">
-        <label htmlFor="expense-payment-date">Payment Date</label>
-        <input
-          id="expense-payment-date"
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Payment Date"
           name="paymentDate"
           type="date"
           value={fields.paymentDate}
@@ -195,11 +167,14 @@ export function ExpenseForm({
         />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="expense-notes">Notes</label>
+      <div className="field" style={{ marginTop: 'var(--space-4)' }}>
+        <label className="field-label" htmlFor="expense-notes">
+          Notes
+        </label>
         <textarea
           id="expense-notes"
           name="notes"
+          className="field-control"
           rows={3}
           value={fields.notes}
           onChange={handleChange}
@@ -207,13 +182,13 @@ export function ExpenseForm({
         />
       </div>
 
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
+      <div className="auth-form-actions">
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>
           Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
+        </Button>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : expense ? 'Save Changes' : 'Add Expense'}
-        </button>
+        </Button>
       </div>
     </form>
   );

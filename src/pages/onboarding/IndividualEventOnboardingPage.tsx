@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createIndividualEvent, OnboardingError } from '@/features/onboarding/services/onboardingService';
 import { TIMEZONES } from '@/lib/timezones';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const EVENT_TYPES = [
   { value: 'wedding', label: 'Wedding' },
@@ -11,6 +15,16 @@ const EVENT_TYPES = [
   { value: 'other', label: 'Other' }
 ];
 
+const TIMEZONE_OPTIONS = TIMEZONES.map((tz) => ({ value: tz, label: tz }));
+
+/**
+ * `/onboarding/event`. Collects only the fields the existing `Event`
+ * model/`createIndividualEvent` Cloud Function accept — name, type,
+ * description, startDate, endDate, timezone, venueName, venueAddress
+ * (timezone is required by the existing validation, so it stays even
+ * though the brief's illustrative example only names three fields) — and
+ * hands off to the existing onboarding service unchanged.
+ */
 export function IndividualEventOnboardingPage(): JSX.Element {
   const navigate = useNavigate();
 
@@ -76,54 +90,47 @@ export function IndividualEventOnboardingPage(): JSX.Element {
   };
 
   return (
-    <section className="onboarding-container">
-      <div className="onboarding-content">
-        <h1>Create your event</h1>
-        <p className="onboarding-subtitle">Let&apos;s get started with the basics</p>
+    <div className="auth-page">
+      <Card className="auth-card auth-card--wide" padded>
+        <div className="auth-card-header">
+          <h1 className="auth-card-title">Let&apos;s set up your event</h1>
+          <p className="auth-card-subtitle">Just the basics for now — you can fill in the rest later.</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="onboarding-form">
+        <form onSubmit={handleSubmit} className="auth-form">
           {error && (
-            <div className="error-message">
-              <p>{error.friendlyMessage}</p>
+            <div className="auth-error-banner" role="alert">
+              {error.friendlyMessage}
             </div>
           )}
 
-          <div className="form-group">
-            <label htmlFor="name">Event Name *</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="e.g., Sarah &amp; Mike&apos;s Wedding"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-          </div>
+          <Input
+            label="Event Name *"
+            name="name"
+            placeholder="e.g., Sarah & Mike's Wedding"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
 
-          <div className="form-group">
-            <label htmlFor="type">Event Type *</label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              disabled={loading}
-            >
-              {EVENT_TYPES.map((et) => (
-                <option key={et.value} value={et.value}>
-                  {et.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label="Event Type *"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+            disabled={loading}
+            options={EVENT_TYPES}
+          />
 
-          <div className="form-group">
-            <label htmlFor="description">Description</label>
+          <div className="field">
+            <label className="field-label" htmlFor="description">
+              Description
+            </label>
             <textarea
               id="description"
               name="description"
+              className="field-control"
               placeholder="Any special details about your event?"
               value={formData.description}
               onChange={handleChange}
@@ -132,241 +139,64 @@ export function IndividualEventOnboardingPage(): JSX.Element {
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="startDate">Start Date *</label>
-              <input
-                id="startDate"
-                name="startDate"
-                type="datetime-local"
-                value={formData.startDate}
-                onChange={handleChange}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="endDate">End Date</label>
-              <input
-                id="endDate"
-                name="endDate"
-                type="datetime-local"
-                value={formData.endDate}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="timezone">Timezone *</label>
-            <select
-              id="timezone"
-              name="timezone"
-              value={formData.timezone}
+          <div className="auth-form-row">
+            <Input
+              label="Start Date *"
+              name="startDate"
+              type="datetime-local"
+              value={formData.startDate}
+              onChange={handleChange}
+              required
+              disabled={loading}
+            />
+            <Input
+              label="End Date"
+              name="endDate"
+              type="datetime-local"
+              value={formData.endDate}
               onChange={handleChange}
               disabled={loading}
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="venueName">Venue Name</label>
-              <input
-                id="venueName"
-                name="venueName"
-                type="text"
-                placeholder="e.g., Grand Ballroom"
-                value={formData.venueName}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
+          <Select
+            label="Timezone *"
+            name="timezone"
+            value={formData.timezone}
+            onChange={handleChange}
+            disabled={loading}
+            options={TIMEZONE_OPTIONS}
+          />
 
-            <div className="form-group">
-              <label htmlFor="venueAddress">Venue Address</label>
-              <input
-                id="venueAddress"
-                name="venueAddress"
-                type="text"
-                placeholder="e.g., 123 Main St"
-                value={formData.venueAddress}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => navigate('/onboarding')}
+          <div className="auth-form-row">
+            <Input
+              label="Venue Name"
+              name="venueName"
+              placeholder="e.g., Grand Ballroom"
+              value={formData.venueName}
+              onChange={handleChange}
               disabled={loading}
-            >
+            />
+            <Input
+              label="Venue Address"
+              name="venueAddress"
+              placeholder="e.g., 123 Main St"
+              value={formData.venueAddress}
+              onChange={handleChange}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="auth-form-actions">
+            <Button type="button" variant="secondary" size="lg" onClick={() => navigate('/onboarding')} disabled={loading}>
               Back
-            </button>
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Event'}
-            </button>
+            </Button>
+            <Button type="submit" size="lg" disabled={loading}>
+              {loading ? 'Creating…' : 'Create Event'}
+            </Button>
           </div>
         </form>
-      </div>
-
-      <style>{`
-        .onboarding-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: calc(100vh - 100px);
-          padding: 2rem;
-          background: #f5f5f5;
-        }
-
-        .onboarding-content {
-          width: 100%;
-          max-width: 600px;
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .onboarding-content h1 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.5rem;
-          color: #333;
-        }
-
-        .onboarding-subtitle {
-          margin: 0 0 2rem 0;
-          color: #666;
-          font-size: 0.95rem;
-        }
-
-        .onboarding-form {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-
-        .error-message {
-          padding: 1rem;
-          background: #fee;
-          border: 1px solid #fcc;
-          border-radius: 4px;
-          color: #c33;
-          margin-bottom: 1rem;
-        }
-
-        .error-message p {
-          margin: 0;
-          font-size: 0.9rem;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-        }
-
-        .form-group label {
-          font-weight: 500;
-          color: #333;
-          font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 1rem;
-          font-family: inherit;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-          outline: none;
-          border-color: #0066cc;
-          box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
-        }
-
-        .form-group input:disabled,
-        .form-group textarea:disabled,
-        .form-group select:disabled {
-          background: #f5f5f5;
-          cursor: not-allowed;
-        }
-
-        .form-actions {
-          display: flex;
-          gap: 1rem;
-          margin-top: 1rem;
-        }
-
-        .btn-primary,
-        .btn-secondary {
-          padding: 0.75rem 1.5rem;
-          border: none;
-          border-radius: 4px;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-weight: 500;
-          flex: 1;
-        }
-
-        .btn-primary {
-          background: #0066cc;
-          color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-          background: #0052a3;
-        }
-
-        .btn-primary:disabled {
-          background: #ccc;
-          cursor: not-allowed;
-        }
-
-        .btn-secondary {
-          background: #f0f0f0;
-          color: #333;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-          background: #e0e0e0;
-        }
-
-        .btn-secondary:disabled {
-          background: #f5f5f5;
-          color: #999;
-          cursor: not-allowed;
-        }
-
-        @media (max-width: 600px) {
-          .form-row {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-    </section>
+      </Card>
+    </div>
   );
 }

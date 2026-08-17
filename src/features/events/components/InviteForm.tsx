@@ -3,6 +3,9 @@ import { invitationService } from '@/app/services';
 import { InviteRoleOption, resolveInviteRole } from '@/features/events/types/people';
 import { EventMemberSide } from '@/types/membership';
 import { InvitationError } from '@/lib/appError';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const ROLE_OPTIONS: { value: InviteRoleOption; label: string }[] = [
   { value: 'bride', label: 'Bride' },
@@ -13,12 +16,20 @@ const ROLE_OPTIONS: { value: InviteRoleOption; label: string }[] = [
   { value: 'viewer', label: 'Viewer' }
 ];
 
+const SIDE_OPTIONS: { value: EventMemberSide | ''; label: string }[] = [
+  { value: '', label: 'Not specified' },
+  { value: EventMemberSide.Bride, label: "Bride's side" },
+  { value: EventMemberSide.Groom, label: "Groom's side" }
+];
+
 /**
- * Invite-person form. The role dropdown speaks in guest-facing terms
- * (Bride/Groom/Family/...); `resolveInviteRole` maps the choice to the
- * EventRole + side the backend actually stores. Side is only asked for
- * Family — Bride/Groom already imply it, and Planner/Staff/Viewer never
- * have one.
+ * Invite-person form — the content of the Modal that hosts it. The role
+ * dropdown speaks in guest-facing terms (Bride/Groom/Family/...);
+ * `resolveInviteRole` maps the choice to the EventRole + side the backend
+ * actually stores. Side is only asked for Family — Bride/Groom already
+ * imply it, and Planner/Staff/Viewer never have one. Only mounted for
+ * users with `canInvite` (owner/planner) — createInvitation independently
+ * re-verifies the role server-side regardless.
  */
 export function InviteForm({
   eventId,
@@ -26,7 +37,7 @@ export function InviteForm({
   onCancel
 }: {
   eventId: string;
-  onInvited: () => void;
+  onInvited: (message: string) => void;
   onCancel: () => void;
 }): JSX.Element {
   const [invitedEmail, setInvitedEmail] = useState('');
@@ -47,7 +58,7 @@ export function InviteForm({
         familySide: familySide || undefined
       });
       await invitationService.createInvitation(eventId, input);
-      onInvited();
+      onInvited(`Invitation sent to ${invitedEmail}.`);
     } catch (err) {
       setError(err instanceof InvitationError ? err.friendlyMessage : "We couldn't send this invitation right now.");
       setSubmitting(false);
@@ -55,61 +66,52 @@ export function InviteForm({
   };
 
   return (
-    <form className="event-form" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
-      {error && <div className="form-error">{error}</div>}
-
-      <div className="form-group">
-        <label htmlFor="invite-email">Email *</label>
-        <input
-          id="invite-email"
-          type="email"
-          placeholder="name@example.com"
-          value={invitedEmail}
-          onChange={(event) => setInvitedEmail(event.target.value)}
-          required
-          disabled={submitting}
-        />
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="invite-role">Invite as *</label>
-        <select
-          id="invite-role"
-          value={roleOption}
-          onChange={(event) => setRoleOption(event.target.value as InviteRoleOption)}
-          disabled={submitting}
-        >
-          {ROLE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {roleOption === 'family' && (
-        <div className="form-group">
-          <label htmlFor="invite-side">Side</label>
-          <select
-            id="invite-side"
-            value={familySide}
-            onChange={(event) => setFamilySide(event.target.value as EventMemberSide | '')}
-            disabled={submitting}
-          >
-            <option value="">Not specified</option>
-            <option value={EventMemberSide.Bride}>Bride&apos;s side</option>
-            <option value={EventMemberSide.Groom}>Groom&apos;s side</option>
-          </select>
+    <form onSubmit={handleSubmit}>
+      {error && (
+        <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {error}
         </div>
       )}
 
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
+      <Input
+        label="Email *"
+        name="invitedEmail"
+        type="email"
+        placeholder="name@example.com"
+        value={invitedEmail}
+        onChange={(event) => setInvitedEmail(event.target.value)}
+        required
+        disabled={submitting}
+      />
+
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Select
+          label="Invite As *"
+          name="roleOption"
+          value={roleOption}
+          onChange={(event) => setRoleOption(event.target.value as InviteRoleOption)}
+          disabled={submitting}
+          options={ROLE_OPTIONS}
+        />
+        {roleOption === 'family' && (
+          <Select
+            label="Side"
+            name="familySide"
+            value={familySide}
+            onChange={(event) => setFamilySide(event.target.value as EventMemberSide | '')}
+            disabled={submitting}
+            options={SIDE_OPTIONS}
+          />
+        )}
+      </div>
+
+      <div className="auth-form-actions">
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>
           Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
+        </Button>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Sending…' : 'Send Invitation'}
-        </button>
+        </Button>
       </div>
     </form>
   );

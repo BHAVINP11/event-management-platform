@@ -1,0 +1,381 @@
+/**
+ * Event Overview — the command center for a single event. A dark plum
+ * hero carries the event's identity (name, dates, venue, countdown, and
+ * an optional ~30%-width cover photo blended into the gradient); below
+ * it, "Next Up" / "Needs Attention" / snapshot answer what's happening
+ * and what needs the viewer's attention, all from data already loaded
+ * for their own pages elsewhere. No repeated navigation grid here —
+ * `EventNav` (the horizontal strip in the shell) is the one place that
+ * lives now.
+ */
+
+.overview-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Hero — the top row of the shared `.event-workspace-card` (see
+   shell.css); no border-radius/shadow/margin of its own, since the card
+   wrapper owns the shared outer boundary now that the hero persists
+   across every event page alongside EventNav. Padding trimmed from the
+   original one-off Overview hero so the always-visible sticky header
+   stays reasonably compact. */
+
+.event-hero {
+  position: relative;
+  background: var(--color-plum);
+  padding: var(--space-7) var(--space-8);
+  --hero-glow-a: var(--color-accent);
+  --hero-glow-b: var(--color-lavender);
+}
+
+.event-hero--structured {
+  --hero-glow-a: var(--color-lavender);
+  --hero-glow-b: var(--color-plum-elevated);
+}
+
+.event-hero--playful {
+  --hero-glow-a: var(--color-peach);
+  --hero-glow-b: var(--color-accent);
+}
+
+.event-hero-glow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(480px circle at 88% -10%, color-mix(in srgb, var(--hero-glow-a) 55%, transparent), transparent 60%),
+    radial-gradient(420px circle at -5% 115%, color-mix(in srgb, var(--hero-glow-b) 40%, transparent), transparent 60%);
+}
+
+.event-hero-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-8);
+}
+
+.event-hero-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The ~30%-width cover photo slot — ready the moment the Event model
+   gains a cover-image field (see final report); ungated code, simply
+   never rendered without a URL to show. A horizontal gradient fades the
+   image's inner edge into the plum background so photo + gradient read
+   as one composition, not "text card + rectangle." */
+.event-hero--with-media .event-hero-content {
+  flex: 1 1 68%;
+}
+
+.event-hero-media {
+  position: relative;
+  flex: 0 0 30%;
+  min-height: 200px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.event-hero-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.event-hero-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--color-plum) 0%, transparent 35%);
+  pointer-events: none;
+}
+
+.event-hero-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.event-hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.event-hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.15;
+  color: var(--color-text-on-plum);
+}
+
+.event-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  color: var(--color-text-on-plum-muted);
+  font-size: var(--font-size-sm);
+}
+
+.event-hero-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.event-hero-meta-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.event-hero-description {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--color-text-on-plum-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  /* Bounded to 2 lines — the hero is now persistent across every event
+     page, so a long description can't grow the sticky header indefinitely. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.event-hero-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-4);
+}
+
+/* Countdown */
+
+.countdown-badge--upcoming {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-plum-border);
+  border-radius: var(--radius-lg);
+}
+
+.countdown-badge-number {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  color: var(--color-peach);
+}
+
+.countdown-badge-label {
+  margin-top: var(--space-1);
+  font-size: 0.65rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-text-on-plum-muted);
+}
+
+.countdown-badge--status {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-plum-border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-on-plum);
+}
+
+.countdown-badge--completed {
+  opacity: 0.75;
+}
+
+/* Command center */
+
+.overview-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.overview-section-header h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.command-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.command-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.command-card-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.command-card-label svg {
+  width: 15px;
+  height: 15px;
+}
+
+.next-up-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.next-up-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.attention-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.attention-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.attention-list-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.command-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.command-empty-title {
+  margin: 0 0 var(--space-1);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+/* Snapshot */
+
+.event-snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.event-snapshot-stat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 130px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-xs);
+}
+
+.event-snapshot-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.event-snapshot-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 767px) {
+  .event-hero-body {
+    flex-direction: column;
+  }
+
+  .event-hero-media {
+    flex-basis: auto;
+    width: 100%;
+    height: 160px;
+  }
+
+  .event-hero-media::after {
+    background: linear-gradient(180deg, var(--color-plum) 0%, transparent 35%);
+  }
+
+  .command-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 639px) {
+  .event-hero {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .event-hero-title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .event-hero-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,135 @@
+/**
+ * Vendor management — `/events/:eventId/vendors`. Each vendor carries
+ * several descriptive fields (contact info, category, status, notes), so
+ * this gets a card grid with real visual hierarchy rather than a dense
+ * row list — the same reasoning as Functions/Ceremonies.
+ */
+
+.vendors-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.vendors-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.vendors-header h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.vendors-subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.vendors-count {
+  margin: var(--space-6) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.vendors-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.vendors-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.vendors-category-filter {
+  width: 200px;
+}
+
+.vendors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.vendor-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.vendor-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.vendor-card-header h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.vendor-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.vendor-category {
+  align-self: flex-start;
+}
+
+.vendor-notes {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  flex: 1;
+}
+
+.vendor-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.vendor-confirm-body {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 639px) {
+  .vendors-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vendors-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vendors-category-filter {
+    width: 100%;
+  }
+
+  .vendors-header .btn {
+    width: 100%;
+  }
+}

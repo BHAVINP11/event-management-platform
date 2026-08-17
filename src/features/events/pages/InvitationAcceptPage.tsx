@@ -4,8 +4,10 @@ import { useInvitationAcceptance } from '@/features/events/hooks/useInvitationAc
 import { personRoleDisplayLabel } from '@/features/events/types/people';
 import { eventMemberSideLabel, eventRoleLabel } from '@/lib/labels';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
-import { resourceStyles } from '@/components/ui/resourceStyles';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { buildLoginRedirectUrl } from '@/lib/redirectTarget';
 
 /**
@@ -24,7 +26,11 @@ export function InvitationAcceptPage(): JSX.Element {
   const { state, accept, reload } = useInvitationAcceptance(invitationId);
 
   if (authLoading) {
-    return <p>Loading...</p>;
+    return (
+      <section className="invitation-accept-page">
+        <LoadingState label="Loading…" />
+      </section>
+    );
   }
 
   if (!user) {
@@ -32,41 +38,36 @@ export function InvitationAcceptPage(): JSX.Element {
   }
 
   return (
-    <section className="resource-page">
-      {state.status === 'loading' && <LoadingSkeleton cards={1} />}
+    <section className="invitation-accept-page">
+      {state.status === 'loading' && <LoadingState label="Loading invitation…" />}
 
       {state.status === 'error' && <ErrorState message={state.message} onRetry={reload} />}
 
       {(state.status === 'preview' || state.status === 'accepting') && (
         <>
           <h1>{state.preview.eventName}</h1>
-          <div className="resource-meta" style={{ marginBottom: '2rem' }}>
-            <span className="resource-tag">{state.preview.invitedEmail}</span>
-            <span className="resource-tag">
+          <div className="invitation-accept-meta">
+            <Badge variant="neutral">{state.preview.invitedEmail}</Badge>
+            <Badge variant="accent">
               {personRoleDisplayLabel(state.preview.role, state.preview.side, eventRoleLabel, eventMemberSideLabel)}
-            </span>
+            </Badge>
           </div>
-
-          <div className="resource-notice">
+          <Card padded className="invitation-accept-notice">
             <p>Accept this invitation to get access to the event.</p>
-            <button type="button" className="btn-primary" onClick={accept} disabled={state.status === 'accepting'}>
+            <Button onClick={accept} disabled={state.status === 'accepting'}>
               {state.status === 'accepting' ? 'Accepting…' : 'Accept Invitation'}
-            </button>
-          </div>
+            </Button>
+          </Card>
         </>
       )}
 
       {state.status === 'accepted' && (
-        <div className="resource-notice">
+        <Card padded className="invitation-accept-notice">
           <h2>You&apos;re in</h2>
           <p>You now have access to this event.</p>
-          <button type="button" className="btn-primary" onClick={() => navigate(`/events/${state.eventId}`)}>
-            Go to event
-          </button>
-        </div>
+          <Button onClick={() => navigate(`/events/${state.eventId}`)}>Go to event</Button>
+        </Card>
       )}
-
-      <style>{resourceStyles}</style>
     </section>
   );
 }

@@ -1,11 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
+type OnboardingType = 'planner' | 'individual';
+
+/**
+ * `/onboarding`. A pure navigation choice — nothing is persisted here.
+ * The selection only decides which existing creation flow to send the
+ * user through next (`/onboarding/planner` creates an Organization,
+ * `/onboarding/event` creates an individual Event); neither the domain
+ * model nor any backend field records "planner" vs. "couple" as its own
+ * concept. See the STEP UI-02 report for why no such field is needed.
+ */
 export function OnboardingTypePage(): JSX.Element {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [selectedType, setSelectedType] = useState<'planner' | 'individual' | null>(null);
+  const [selectedType, setSelectedType] = useState<OnboardingType | null>(null);
 
   const handleContinue = (): void => {
     if (selectedType === 'planner') {
@@ -16,138 +28,53 @@ export function OnboardingTypePage(): JSX.Element {
   };
 
   return (
-    <section className="onboarding-container">
-      <div className="onboarding-content">
-        <h1>Welcome, {user?.firstName}!</h1>
-        <p className="onboarding-subtitle">What are you here to do?</p>
+    <div className="auth-page">
+      <div className="auth-card auth-card--wide">
+        <div className="auth-card-header">
+          <h1 className="auth-card-title">Welcome{user?.firstName ? `, ${user.firstName}` : ''}!</h1>
+          <p className="auth-card-subtitle">How will you use Event Management Platform?</p>
+        </div>
 
-        <div className="onboarding-choices">
+        <div className="auth-choice-grid">
           <button
-            className={`choice-button ${selectedType === 'planner' ? 'active' : ''}`}
+            type="button"
+            className="auth-choice"
+            aria-pressed={selectedType === 'planner'}
             onClick={() => setSelectedType('planner')}
           >
-            <h3>I manage events</h3>
-            <p>Professional event planning</p>
+            <Card
+              padded
+              interactive
+              className={selectedType === 'planner' ? 'auth-choice-card auth-choice-card--selected' : 'auth-choice-card'}
+            >
+              <h3>Event Planner</h3>
+              <p>Manage multiple events and clients.</p>
+            </Card>
           </button>
 
           <button
-            className={`choice-button ${selectedType === 'individual' ? 'active' : ''}`}
+            type="button"
+            className="auth-choice"
+            aria-pressed={selectedType === 'individual'}
             onClick={() => setSelectedType('individual')}
           >
-            <h3>I&apos;m planning my own event</h3>
-            <p>Organize your personal celebration</p>
+            <Card
+              padded
+              interactive
+              className={
+                selectedType === 'individual' ? 'auth-choice-card auth-choice-card--selected' : 'auth-choice-card'
+              }
+            >
+              <h3>Planning my own event</h3>
+              <p>Manage your wedding or event with your family.</p>
+            </Card>
           </button>
         </div>
 
-        <div className="onboarding-actions">
-          <button
-            className="btn-primary"
-            disabled={!selectedType}
-            onClick={handleContinue}
-          >
-            Continue
-          </button>
-        </div>
+        <Button size="lg" fullWidth disabled={!selectedType} onClick={handleContinue}>
+          Continue
+        </Button>
       </div>
-
-      <style>{`
-        .onboarding-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: calc(100vh - 100px);
-          padding: 2rem;
-          background: #f5f5f5;
-        }
-
-        .onboarding-content {
-          width: 100%;
-          max-width: 600px;
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          text-align: center;
-        }
-
-        .onboarding-content h1 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.8rem;
-          color: #333;
-        }
-
-        .onboarding-subtitle {
-          margin: 0 0 2rem 0;
-          font-size: 1.1rem;
-          color: #666;
-        }
-
-        .onboarding-choices {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          margin: 2rem 0;
-        }
-
-        .choice-button {
-          padding: 1.5rem;
-          border: 2px solid #ddd;
-          border-radius: 8px;
-          background: white;
-          cursor: pointer;
-          transition: all 0.2s;
-          text-align: center;
-        }
-
-        .choice-button:hover {
-          border-color: #0066cc;
-          background: #f0f7ff;
-        }
-
-        .choice-button.active {
-          border-color: #0066cc;
-          background: #e6f2ff;
-        }
-
-        .choice-button h3 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.1rem;
-          color: #333;
-        }
-
-        .choice-button p {
-          margin: 0;
-          font-size: 0.9rem;
-          color: #666;
-        }
-
-        .onboarding-actions {
-          display: flex;
-          gap: 1rem;
-          margin-top: 2rem;
-          justify-content: center;
-        }
-
-        .btn-primary {
-          padding: 0.75rem 2rem;
-          background: #0066cc;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-          background: #0052a3;
-        }
-
-        .btn-primary:disabled {
-          background: #ccc;
-          cursor: not-allowed;
-        }
-      `}</style>
-    </section>
+    </div>
   );
 }

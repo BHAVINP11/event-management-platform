@@ -1,0 +1,157 @@
+/**
+ * Shared layout for the auth/onboarding surfaces: Login, Signup, user-type
+ * selection, planner setup, and event setup. One centered card, generous
+ * whitespace, one obvious primary action — deliberately not styled like
+ * the resource pages (no sidebar/toolbar chrome at this stage of the
+ * journey).
+ */
+
+.auth-page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-card--wide {
+  max-width: 640px;
+}
+
+.auth-card-header {
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.auth-card-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.auth-card-subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.auth-error-banner {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-danger-tint);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.auth-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.auth-form-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.auth-form-actions .btn {
+  flex: 1;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.auth-footer a {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.auth-footer a:hover {
+  color: var(--color-accent-hover);
+}
+
+/* User-type selection */
+
+.auth-choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.auth-choice {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: var(--radius-md);
+}
+
+.auth-choice:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.auth-choice-card {
+  height: 100%;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.auth-choice-card--selected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+}
+
+.auth-choice-card h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.auth-choice-card p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 639px) {
+  .auth-page {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .auth-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-form-actions {
+    flex-direction: column-reverse;
+  }
+}

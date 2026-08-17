@@ -10,6 +10,8 @@ export interface EventPersonSummary {
   role: EventRole;
   side: EventMemberSide | null;
   status: MembershipStatus;
+  /** When this membership was created — the EventMember's own `createdAt`. */
+  joinedAt: string;
 }
 
 /** A row on the People page representing a pending invitation. */
@@ -19,6 +21,8 @@ export interface EventInvitationSummary {
   role: EventRole;
   side: EventMemberSide | null;
   status: InvitationStatus;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export interface EventPeopleData {
@@ -54,24 +58,54 @@ export interface InvitationCreationInput {
   side?: EventMemberSide;
 }
 
+export interface RoleSide {
+  role: EventRole;
+  side?: EventMemberSide;
+}
+
+/**
+ * Maps a user-facing role choice (Bride/Groom/Family/...) to the
+ * EventRole + side the backend actually stores. Shared by the invite
+ * form and the change-member-role form, so the two vocabularies can
+ * never drift apart.
+ */
+export function roleOptionToRoleSide(roleOption: InviteRoleOption, familySide?: EventMemberSide): RoleSide {
+  switch (roleOption) {
+    case 'bride':
+      return { role: EventRole.Couple, side: EventMemberSide.Bride };
+    case 'groom':
+      return { role: EventRole.Couple, side: EventMemberSide.Groom };
+    case 'family':
+      return { role: EventRole.Family, side: familySide };
+    case 'planner':
+      return { role: EventRole.Planner };
+    case 'staff':
+      return { role: EventRole.Staff };
+    case 'viewer':
+      return { role: EventRole.Viewer };
+  }
+}
+
 /** Maps a user-facing invite choice to the underlying role/side the backend stores. */
 export function resolveInviteRole(input: InviteFormInput): InvitationCreationInput {
-  const invitedEmail = input.invitedEmail;
+  return { invitedEmail: input.invitedEmail, ...roleOptionToRoleSide(input.roleOption, input.familySide) };
+}
 
-  switch (input.roleOption) {
-    case 'bride':
-      return { invitedEmail, role: EventRole.Couple, side: EventMemberSide.Bride };
-    case 'groom':
-      return { invitedEmail, role: EventRole.Couple, side: EventMemberSide.Groom };
-    case 'family':
-      return { invitedEmail, role: EventRole.Family, side: input.familySide };
-    case 'planner':
-      return { invitedEmail, role: EventRole.Planner };
-    case 'staff':
-      return { invitedEmail, role: EventRole.Staff };
-    case 'viewer':
-      return { invitedEmail, role: EventRole.Viewer };
+/** The inverse of `roleOptionToRoleSide` — used to pre-select a member's current role in the change-role form. */
+export function roleSideToRoleOption(role: EventRole, side: EventMemberSide | null | undefined): InviteRoleOption {
+  if (role === EventRole.Couple) {
+    return side === EventMemberSide.Groom ? 'groom' : 'bride';
   }
+  if (role === EventRole.Family) {
+    return 'family';
+  }
+  if (role === EventRole.Planner) {
+    return 'planner';
+  }
+  if (role === EventRole.Staff) {
+    return 'staff';
+  }
+  return 'viewer';
 }
 
 /**

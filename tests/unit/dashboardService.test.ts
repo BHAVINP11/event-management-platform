@@ -223,6 +223,36 @@ describe('DashboardService', () => {
     expect(data.events[0]).toMatchObject({ organizationId: null, organizationName: null });
   });
 
+  test('an event summary projects venue fields already present on the loaded event, at no extra read cost', async () => {
+    const { service, eventRepository } = buildWorld({
+      events: [
+        buildEvent({
+          id: 'event1',
+          venueName: 'Grand Ballroom',
+          venueAddress: '123 Main St'
+        })
+      ],
+      eventMembers: [buildEventMember('event1', 'user1')]
+    });
+
+    const data = await service.getDashboardData('user1', now);
+
+    expect(data.events[0]).toMatchObject({ venueName: 'Grand Ballroom', venueAddress: '123 Main St' });
+    expect(eventRepository.reads).toEqual(['event1']);
+  });
+
+  test('an event summary omits venue fields when the event has none', async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1')]
+    });
+
+    const data = await service.getDashboardData('user1', now);
+
+    expect(data.events[0].venueName).toBeUndefined();
+    expect(data.events[0].venueAddress).toBeUndefined();
+  });
+
   test('upcoming events sort earliest first, ahead of undated and past events', async () => {
     const { service } = buildWorld({
       events: [

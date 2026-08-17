@@ -7,6 +7,7 @@
  * creation flows cannot drift apart.
  */
 import {
+  ValidationError,
   validateEventName,
   validateEventType,
   validateStartDate,
@@ -96,6 +97,77 @@ export function buildEventDocument(
   }
   if (input.venueAddress !== undefined) {
     doc.venueAddress = input.venueAddress;
+  }
+
+  return doc;
+}
+
+export const VALID_EVENT_STATUSES = ['draft', 'active', 'completed', 'archived'] as const;
+
+export interface EventEditFields extends EventCreationFields {
+  status: string;
+}
+
+/** Validates the fields common to full event edits — the creation fields plus status. */
+export function validateEventEditFields(obj: Record<string, unknown>): EventEditFields {
+  const fields = validateEventCreationFields(obj);
+
+  if (!obj.status || typeof obj.status !== 'string' || !VALID_EVENT_STATUSES.includes(obj.status as (typeof VALID_EVENT_STATUSES)[number])) {
+    throw new ValidationError('invalid_status', `Status must be one of: ${VALID_EVENT_STATUSES.join(', ')}`);
+  }
+
+  return { ...fields, status: obj.status };
+}
+
+/**
+ * Builds the full replacement Event document for an edit (name/type/
+ * description/dates/timezone/venue/status). A full `.set()`, not a
+ * partial `.update()` — matching `buildGuestDocument`'s approach — so
+ * clearing an optional field (e.g. removing a venue) actually removes it
+ * rather than leaving stale data, with no `FieldValue.delete()` sentinel
+ * needed. `budgetAmount` and `coverImageUrl` are never touched here —
+ * they have their own dedicated update functions — so the caller must
+ * pass through whatever the existing document already has for both.
+ */
+export function buildEventUpdateDocument(
+  eventId: string,
+  createdBy: string,
+  organizationId: string | null,
+  input: EventEditFields,
+  createdAt: string,
+  now: string,
+  existing: { budgetAmount?: number; coverImageUrl?: string | null }
+): Record<string, unknown> {
+  const doc: Record<string, unknown> = {
+    id: eventId,
+    name: input.name,
+    type: input.type,
+    startDate: input.startDate,
+    timezone: input.timezone,
+    organizationId,
+    createdBy,
+    status: input.status,
+    createdAt,
+    updatedAt: now
+  };
+
+  if (input.description !== undefined) {
+    doc.description = input.description;
+  }
+  if (input.endDate !== undefined) {
+    doc.endDate = input.endDate;
+  }
+  if (input.venueName !== undefined) {
+    doc.venueName = input.venueName;
+  }
+  if (input.venueAddress !== undefined) {
+    doc.venueAddress = input.venueAddress;
+  }
+  if (existing.budgetAmount !== undefined) {
+    doc.budgetAmount = existing.budgetAmount;
+  }
+  if (existing.coverImageUrl !== undefined && existing.coverImageUrl !== null) {
+    doc.coverImageUrl = existing.coverImageUrl;
   }
 
   return doc;

@@ -1,0 +1,92 @@
+/**
+ * Event creation — `/events/new`. A short multi-stage flow (choose
+ * individual vs. organization, pick an organization, fill in details);
+ * reuses the same field/form-row/form-actions conventions as the other
+ * forms in the app (see auth.css) rather than inventing new ones.
+ */
+
+.event-creation-page {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.event-creation-page h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.event-creation-subtitle {
+  margin: var(--space-1) 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.creation-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.creation-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: left;
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.creation-option:hover,
+.creation-option:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.creation-option h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.creation-option p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.org-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+}
+
+.org-select-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.org-select-item-label {
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+@media (max-width: 639px) {
+  .creation-options {
+    grid-template-columns: 1fr;
+  }
+}

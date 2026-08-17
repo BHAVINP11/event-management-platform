@@ -1,0 +1,208 @@
+/**
+ * Budget + Expenses — `/events/:eventId/expenses`. A financial summary
+ * card up top (no charts, no percentages), then a dense scannable row
+ * list that collapses into stacked cards on narrow screens, matching the
+ * guests list pattern.
+ */
+
+.expenses-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.expenses-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.expenses-header h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.expenses-subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.budget-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin: var(--space-6) 0;
+}
+
+.budget-summary-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.budget-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.budget-stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.budget-stat-value--negative {
+  color: var(--color-danger);
+}
+
+.budget-stat-label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.expenses-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.expenses-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.expenses-category-filter,
+.expenses-status-filter {
+  width: 200px;
+}
+
+.expenses-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.expense-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.expense-row-primary h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.expense-row-primary p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.expense-row-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.expense-row-field-label {
+  display: none;
+}
+
+.expense-row-field-note {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-xs);
+}
+
+.expense-row-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-self: end;
+}
+
+.expense-confirm-body,
+.budget-confirm-body {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 1023px) {
+  .expense-row {
+    grid-template-columns: 2fr 1fr 1fr auto;
+  }
+
+  .expense-row-field--date {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .expense-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: var(--space-3);
+  }
+
+  .expense-row-field {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .expense-row-field-label {
+    display: inline;
+    color: var(--color-text-subtle);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .expense-row-field--date {
+    display: flex;
+  }
+
+  .expense-row-actions {
+    justify-self: start;
+  }
+
+  .budget-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .budget-summary-stats {
+    gap: var(--space-4);
+    justify-content: space-between;
+  }
+
+  .expenses-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .expenses-category-filter,
+  .expenses-status-filter {
+    width: 100%;
+  }
+
+  .expenses-header .btn {
+    width: 100%;
+  }
+}

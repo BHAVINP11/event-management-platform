@@ -45,8 +45,6 @@ export const signUp = async (payload: SignUpPayload): Promise<User> => {
     lastName: payload.lastName,
     displayName: `${payload.firstName} ${payload.lastName}`,
     email: payload.email,
-    phone: undefined,
-    avatarUrl: undefined,
     createdAt: now,
     updatedAt: now
   };

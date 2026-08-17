@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Membership IDs are `${eventId}_${uid}`, matching Firestore's own
+    // convention (src/repositories/membershipIds.ts / firestore.rules).
+    // Cross-service rules let Storage read the same Firestore membership
+    // doc, so cover-image upload authority is the exact owner/planner
+    // check used everywhere else — no parallel authorization system.
+    function isEventManager(eventId) {
+      let membershipPath = /databases/(default)/documents/eventMembers/$(eventId + '_' + request.auth.uid);
+      return request.auth != null &&
+        firestore.exists(membershipPath) &&
+        firestore.get(membershipPath).data.status == 'active' &&
+        firestore.get(membershipPath).data.eventId == eventId &&
+        firestore.get(membershipPath).data.userId == request.auth.uid &&
+        firestore.get(membershipPath).data.role in ['owner', 'planner'];
+    }
+
+    // Event cover photos — one folder per event, so a write can never
+    // touch another event's files. Only an owner/planner of that specific
+    // event may upload/replace/delete; any authenticated user may read
+    // (rendering a cover photo doesn't require event membership, matching
+    // how the rest of the app treats read access to non-sensitive media).
+    match /event-covers/{eventId}/{fileName} {
+      allow read: if request.auth != null;
+
+      allow write: if isEventManager(eventId) &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(jpeg|png|webp)');
+
+      allow delete: if isEventManager(eventId);
+    }
+
+    // User avatars — one folder per user, writable/deletable only by that
+    // user themselves (no event/organization authority involved, unlike
+    // event covers). Any authenticated user may read (avatars are shown
+    // to co-members throughout the app).
+    match /user-avatars/{userId}/{fileName} {
+      allow read: if request.auth != null;
+
+      allow write: if request.auth != null && request.auth.uid == userId &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(jpeg|png|webp)');
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Default deny everything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

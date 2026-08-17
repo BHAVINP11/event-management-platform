@@ -24,6 +24,26 @@ export { getEventMembershipId };
  * Optional fields are omitted rather than stored as `undefined`.
  */
 export declare function buildEventDocument(eventId: string, userId: string, organizationId: string | null, input: EventCreationFields, now: string): Record<string, unknown>;
+export declare const VALID_EVENT_STATUSES: readonly ["draft", "active", "completed", "archived"];
+export interface EventEditFields extends EventCreationFields {
+    status: string;
+}
+/** Validates the fields common to full event edits — the creation fields plus status. */
+export declare function validateEventEditFields(obj: Record<string, unknown>): EventEditFields;
+/**
+ * Builds the full replacement Event document for an edit (name/type/
+ * description/dates/timezone/venue/status). A full `.set()`, not a
+ * partial `.update()` — matching `buildGuestDocument`'s approach — so
+ * clearing an optional field (e.g. removing a venue) actually removes it
+ * rather than leaving stale data, with no `FieldValue.delete()` sentinel
+ * needed. `budgetAmount` and `coverImageUrl` are never touched here —
+ * they have their own dedicated update functions — so the caller must
+ * pass through whatever the existing document already has for both.
+ */
+export declare function buildEventUpdateDocument(eventId: string, createdBy: string, organizationId: string | null, input: EventEditFields, createdAt: string, now: string, existing: {
+    budgetAmount?: number;
+    coverImageUrl?: string | null;
+}): Record<string, unknown>;
 /**
  * Builds the creator's EventMember document.
  *

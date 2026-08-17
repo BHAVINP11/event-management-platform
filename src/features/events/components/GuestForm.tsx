@@ -3,6 +3,9 @@ import { guestService } from '@/app/services';
 import { GuestFormInput } from '@/features/events/types/guests';
 import { Guest, GuestSide, GuestStatus } from '@/types/guest';
 import { GuestError } from '@/lib/appError';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const ALL_SIDE_LABELS: Record<GuestSide, string> = {
   [GuestSide.Bride]: 'Bride',
@@ -48,13 +51,13 @@ const toInput = (fields: GuestFormFields): GuestFormInput => ({
 });
 
 /**
- * Add/edit guest form. Only mounted for users with `canManage` — and even
- * then, the Side field only offers the sides `allowedSides` says this
- * caller may set (all three for owner/planner, bride+both or groom+both
- * for a couple member). createGuest/updateGuest independently re-verify
- * the chosen side server-side regardless. `eventId`/`createdBy`/`id`/
- * `createdAt` are never part of this form; the Cloud Function derives or
- * preserves them itself.
+ * Add/edit guest form — the content of the Modal that hosts it. Only
+ * mounted for users with `canManage` — and even then, the Side field only
+ * offers the sides `allowedSides` says this caller may set (all three for
+ * owner/planner, bride+both or groom+both for a couple member).
+ * createGuest/updateGuest independently re-verify the chosen side
+ * server-side regardless. `eventId`/`createdBy`/`id`/`createdAt` are never
+ * part of this form; the Cloud Function derives or preserves them itself.
  */
 export function GuestForm({
   eventId,
@@ -66,7 +69,7 @@ export function GuestForm({
   eventId: string;
   guest?: Guest;
   allowedSides: readonly GuestSide[];
-  onSaved: () => void;
+  onSaved: (message: string) => void;
   onCancel: () => void;
 }): JSX.Element {
   const [fields, setFields] = useState<GuestFormFields>(toFields(guest, allowedSides));
@@ -89,10 +92,11 @@ export function GuestForm({
       const input = toInput(fields);
       if (guest) {
         await guestService.updateGuest(guest.id, input);
+        onSaved('Guest updated.');
       } else {
         await guestService.createGuest(eventId, input);
+        onSaved('Guest added.');
       }
-      onSaved();
     } catch (err) {
       setError(err instanceof GuestError ? err.friendlyMessage : "We couldn't save this guest right now.");
       setSubmitting(false);
@@ -100,78 +104,57 @@ export function GuestForm({
   };
 
   return (
-    <form className="event-form" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
-      {error && <div className="form-error">{error}</div>}
+    <form onSubmit={handleSubmit}>
+      {error && (
+        <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {error}
+        </div>
+      )}
 
-      <div className="form-group">
-        <label htmlFor="guest-name">Name *</label>
-        <input
-          id="guest-name"
-          name="name"
-          type="text"
-          value={fields.name}
+      <Input label="Name *" name="name" value={fields.name} onChange={handleChange} required disabled={submitting} />
+
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Phone"
+          name="phone"
+          type="tel"
+          value={fields.phone}
           onChange={handleChange}
-          required
+          disabled={submitting}
+        />
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          value={fields.email}
+          onChange={handleChange}
           disabled={submitting}
         />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="guest-phone">Phone</label>
-          <input
-            id="guest-phone"
-            name="phone"
-            type="tel"
-            value={fields.phone}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="guest-email">Email</label>
-          <input
-            id="guest-email"
-            name="email"
-            type="email"
-            value={fields.email}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Select
+          label="Side *"
+          name="side"
+          value={fields.side}
+          onChange={handleChange}
+          disabled={submitting}
+          options={allowedSides.map((side) => ({ value: side, label: ALL_SIDE_LABELS[side] }))}
+        />
+        <Select
+          label="Status"
+          name="status"
+          value={fields.status}
+          onChange={handleChange}
+          disabled={submitting}
+          options={STATUS_OPTIONS}
+        />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="guest-side">Side *</label>
-          <select id="guest-side" name="side" value={fields.side} onChange={handleChange} disabled={submitting}>
-            {allowedSides.map((side) => (
-              <option key={side} value={side}>
-                {ALL_SIDE_LABELS[side]}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="guest-status">Status</label>
-          <select id="guest-status" name="status" value={fields.status} onChange={handleChange} disabled={submitting}>
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="guest-relation">Relation</label>
-        <input
-          id="guest-relation"
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Relation"
           name="relation"
-          type="text"
           placeholder="e.g., Uncle"
           value={fields.relation}
           onChange={handleChange}
@@ -179,11 +162,14 @@ export function GuestForm({
         />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="guest-notes">Notes</label>
+      <div className="field" style={{ marginTop: 'var(--space-4)' }}>
+        <label className="field-label" htmlFor="guest-notes">
+          Notes
+        </label>
         <textarea
           id="guest-notes"
           name="notes"
+          className="field-control"
           rows={3}
           value={fields.notes}
           onChange={handleChange}
@@ -191,13 +177,13 @@ export function GuestForm({
         />
       </div>
 
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
+      <div className="auth-form-actions">
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>
           Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
+        </Button>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : guest ? 'Save Changes' : 'Add Guest'}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -2,7 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { createOrganization, OnboardingError } from '@/features/onboarding/services/onboardingService';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
+/**
+ * `/onboarding/planner`. Collects only the fields the existing
+ * `Organization` model/`createOrganization` Cloud Function accept —
+ * name, slug, description, contactEmail, contactPhone — and hands off to
+ * the existing onboarding service unchanged.
+ */
 export function PlannerOnboardingPage(): JSX.Element {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -66,52 +75,49 @@ export function PlannerOnboardingPage(): JSX.Element {
   };
 
   return (
-    <section className="onboarding-container">
-      <div className="onboarding-content">
-        <h1>Set up your organization</h1>
-        <p className="onboarding-subtitle">Tell us about your business</p>
+    <div className="auth-page">
+      <Card className="auth-card" padded>
+        <div className="auth-card-header">
+          <h1 className="auth-card-title">Set up your organization</h1>
+          <p className="auth-card-subtitle">Tell us about your business.</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="onboarding-form">
+        <form onSubmit={handleSubmit} className="auth-form">
           {error && (
-            <div className="error-message">
-              <p>{error.friendlyMessage}</p>
+            <div className="auth-error-banner" role="alert">
+              {error.friendlyMessage}
             </div>
           )}
 
-          <div className="form-group">
-            <label htmlFor="name">Organization Name *</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="e.g., Royal Events"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-          </div>
+          <Input
+            label="Organization Name *"
+            name="name"
+            placeholder="e.g., Royal Events"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            disabled={loading}
+          />
 
-          <div className="form-group">
-            <label htmlFor="slug">Organization URL *</label>
-            <input
-              id="slug"
-              name="slug"
-              type="text"
-              placeholder="e.g., royal-events"
-              value={formData.slug}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-            <small>Alphanumeric and hyphens only</small>
-          </div>
+          <Input
+            label="Organization URL *"
+            name="slug"
+            placeholder="e.g., royal-events"
+            value={formData.slug}
+            onChange={handleChange}
+            required
+            disabled={loading}
+            hint="Alphanumeric and hyphens only"
+          />
 
-          <div className="form-group">
-            <label htmlFor="description">Description</label>
+          <div className="field">
+            <label className="field-label" htmlFor="description">
+              Description
+            </label>
             <textarea
               id="description"
               name="description"
+              className="field-control"
               placeholder="What services do you provide?"
               value={formData.description}
               onChange={handleChange}
@@ -120,185 +126,36 @@ export function PlannerOnboardingPage(): JSX.Element {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="contactEmail">Email</label>
-            <input
-              id="contactEmail"
-              name="contactEmail"
-              type="email"
-              placeholder="contact@example.com"
-              value={formData.contactEmail}
-              onChange={handleChange}
-              disabled={loading}
-            />
-          </div>
+          <Input
+            label="Email"
+            name="contactEmail"
+            type="email"
+            placeholder="contact@example.com"
+            value={formData.contactEmail}
+            onChange={handleChange}
+            disabled={loading}
+          />
 
-          <div className="form-group">
-            <label htmlFor="contactPhone">Phone</label>
-            <input
-              id="contactPhone"
-              name="contactPhone"
-              type="tel"
-              placeholder="(555) 123-4567"
-              value={formData.contactPhone}
-              onChange={handleChange}
-              disabled={loading}
-            />
-          </div>
+          <Input
+            label="Phone"
+            name="contactPhone"
+            type="tel"
+            placeholder="(555) 123-4567"
+            value={formData.contactPhone}
+            onChange={handleChange}
+            disabled={loading}
+          />
 
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => navigate('/onboarding')}
-              disabled={loading}
-            >
+          <div className="auth-form-actions">
+            <Button type="button" variant="secondary" size="lg" onClick={() => navigate('/onboarding')} disabled={loading}>
               Back
-            </button>
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Organization'}
-            </button>
+            </Button>
+            <Button type="submit" size="lg" disabled={loading}>
+              {loading ? 'Creating…' : 'Create Organization'}
+            </Button>
           </div>
         </form>
-      </div>
-
-      <style>{`
-        .onboarding-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: calc(100vh - 100px);
-          padding: 2rem;
-          background: #f5f5f5;
-        }
-
-        .onboarding-content {
-          width: 100%;
-          max-width: 500px;
-          background: white;
-          padding: 2rem;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .onboarding-content h1 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.5rem;
-          color: #333;
-        }
-
-        .onboarding-subtitle {
-          margin: 0 0 2rem 0;
-          color: #666;
-          font-size: 0.95rem;
-        }
-
-        .onboarding-form {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-
-        .error-message {
-          padding: 1rem;
-          background: #fee;
-          border: 1px solid #fcc;
-          border-radius: 4px;
-          color: #c33;
-          margin-bottom: 1rem;
-        }
-
-        .error-message p {
-          margin: 0;
-          font-size: 0.9rem;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .form-group label {
-          font-weight: 500;
-          color: #333;
-          font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group textarea {
-          padding: 0.75rem;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 1rem;
-          font-family: inherit;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-          outline: none;
-          border-color: #0066cc;
-          box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
-        }
-
-        .form-group input:disabled,
-        .form-group textarea:disabled {
-          background: #f5f5f5;
-          cursor: not-allowed;
-        }
-
-        .form-group small {
-          color: #999;
-          font-size: 0.8rem;
-        }
-
-        .form-actions {
-          display: flex;
-          gap: 1rem;
-          margin-top: 1rem;
-        }
-
-        .btn-primary,
-        .btn-secondary {
-          padding: 0.75rem 1.5rem;
-          border: none;
-          border-radius: 4px;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-weight: 500;
-          flex: 1;
-        }
-
-        .btn-primary {
-          background: #0066cc;
-          color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-          background: #0052a3;
-        }
-
-        .btn-primary:disabled {
-          background: #ccc;
-          cursor: not-allowed;
-        }
-
-        .btn-secondary {
-          background: #f0f0f0;
-          color: #333;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-          background: #e0e0e0;
-        }
-
-        .btn-secondary:disabled {
-          background: #f5f5f5;
-          color: #999;
-          cursor: not-allowed;
-        }
-      `}</style>
-    </section>
+      </Card>
+    </div>
   );
 }

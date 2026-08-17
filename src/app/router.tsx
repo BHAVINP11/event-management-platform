@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/public/HomePage';
 import { LoginPage } from '@/pages/public/LoginPage';
 import { SignupPage } from '@/pages/public/SignupPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
+import { ProfilePage } from '@/features/auth/pages/ProfilePage';
 import { EventWorkspacePage } from '@/features/events/pages/EventWorkspacePage';
 import { EventCreatePage } from '@/features/events/pages/EventCreatePage';
 import { EventPeoplePage } from '@/features/events/pages/EventPeoplePage';
@@ -36,6 +37,7 @@ export function AppRouter(): JSX.Element {
             sent through login/signup with a way back to this exact URL,
             which the page itself handles (see InvitationAcceptPage). */}
         <Route path="/invitations/:invitationId" element={<InvitationAcceptPage />} />
+        <Route path="/404" element={<NotFoundPage />} />
       </Route>
 
       {/* The authenticated app shell (header + sidebar + main): every
@@ -45,6 +47,7 @@ export function AppRouter(): JSX.Element {
           have a sidebar-worthy nested navigation yet). */}
       <Route element={<AppShell />}>
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/events/:eventId" element={<ProtectedRoute><EventWorkspacePage /></ProtectedRoute>} />
         <Route path="/events/:eventId/people" element={<ProtectedRoute><EventPeoplePage /></ProtectedRoute>} />
         <Route path="/events/:eventId/guests" element={<ProtectedRoute><GuestsPage /></ProtectedRoute>} />
@@ -56,7 +59,6 @@ export function AppRouter(): JSX.Element {
 
       {/* The dashboard is the single list of accessible events. */}
       <Route path="/events" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/404" element={<NotFoundPage />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   );

@@ -1,22 +1,18 @@
-import { EventFunction, EventFunctionStatus } from '@/types/eventFunction';
+import { EventFunction } from '@/types/eventFunction';
 import { eventFunctionStatusLabel } from '@/lib/labels';
+import { eventFunctionStatusBadgeVariant } from '@/lib/badgeVariants';
 import { formatEventDate } from '@/lib/date';
-
-const statusTagClass: Record<EventFunction['status'], string> = {
-  [EventFunctionStatus.Planned]: 'status-draft',
-  [EventFunctionStatus.Confirmed]: 'status-active',
-  [EventFunctionStatus.Completed]: 'status-active',
-  [EventFunctionStatus.Cancelled]: 'status-archived'
-};
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 function formatTimeRange(startTime: string | undefined, endTime: string | undefined): string | null {
-  if (startTime && endTime) {
-    return `${startTime} – ${endTime}`;
-  }
+  if (startTime && endTime) return `${startTime} – ${endTime}`;
   return startTime ?? endTime ?? null;
 }
 
-function FunctionRow({
+function FunctionCard({
   fn,
   canManage,
   onEdit,
@@ -28,63 +24,66 @@ function FunctionRow({
   onDelete: () => void;
 }): JSX.Element {
   const date = formatEventDate(fn.date);
-  const time = formatTimeRange(fn.startTime, fn.endTime);
+  const timeRange = formatTimeRange(fn.startTime, fn.endTime);
 
   return (
-    <li className="resource-card">
-      <div className="resource-card-body">
+    <Card padded className="function-card">
+      <div className="function-card-header">
         <h3>{fn.name}</h3>
-        <div className="resource-meta">
-          {date && <span className="resource-tag">{date}</span>}
-          {time && <span className="resource-tag">{time}</span>}
-          {fn.venue && <span className="resource-tag">{fn.venue}</span>}
-          <span className={`resource-tag ${statusTagClass[fn.status]}`}>{eventFunctionStatusLabel(fn.status)}</span>
-        </div>
-        {fn.description && <p>{fn.description}</p>}
+        <Badge variant={eventFunctionStatusBadgeVariant(fn.status)}>{eventFunctionStatusLabel(fn.status)}</Badge>
       </div>
 
+      <div className="function-meta">
+        {date && <span>{date}</span>}
+        {timeRange && <span>{timeRange}</span>}
+        {fn.venue && <span>{fn.venue}</span>}
+      </div>
+
+      {fn.description && <p className="function-description">{fn.description}</p>}
+
       {canManage && (
-        <div className="resource-card-actions">
-          <button type="button" className="btn-secondary" onClick={onEdit}>
+        <div className="function-card-actions">
+          <Button variant="secondary" size="sm" onClick={onEdit}>
             Edit
-          </button>
-          <button type="button" className="btn-secondary" onClick={onDelete}>
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onDelete}>
             Delete
-          </button>
+          </Button>
         </div>
       )}
-    </li>
+    </Card>
   );
 }
 
-/**
- * The function/ceremony rows for `/events/:eventId/functions`. `functions`
- * is the full list for the event — no client-side filtering, unlike Guests.
- */
+/** The function/ceremony cards for `/events/:eventId/functions`. `functions` is expected to already be sorted. */
 export function FunctionList({
   functions,
   canManage,
+  onAdd,
   onEdit,
   onDelete
 }: {
   functions: readonly EventFunction[];
   canManage: boolean;
+  onAdd: () => void;
   onEdit: (fn: EventFunction) => void;
   onDelete: (fn: EventFunction) => void;
 }): JSX.Element {
   if (functions.length === 0) {
     return (
-      <div className="resource-empty">
-        <p>No functions added yet.</p>
-      </div>
+      <EmptyState
+        title="No functions yet"
+        description="Add your first function to start organizing the event."
+        action={canManage ? <Button onClick={onAdd}>+ Add Function</Button> : undefined}
+      />
     );
   }
 
   return (
-    <ul className="resource-list">
+    <div className="functions-grid">
       {functions.map((fn) => (
-        <FunctionRow key={fn.id} fn={fn} canManage={canManage} onEdit={() => onEdit(fn)} onDelete={() => onDelete(fn)} />
+        <FunctionCard key={fn.id} fn={fn} canManage={canManage} onEdit={() => onEdit(fn)} onDelete={() => onDelete(fn)} />
       ))}
-    </ul>
+    </div>
   );
 }

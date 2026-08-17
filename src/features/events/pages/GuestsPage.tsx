@@ -5,35 +5,56 @@ import { useGuestList } from '@/features/events/hooks/useGuestList';
 import { GuestForm } from '@/features/events/components/GuestForm';
 import { GuestList } from '@/features/events/components/GuestList';
 import { guestService } from '@/app/services';
-import { Guest, GuestSide } from '@/types/guest';
+import { Guest, GuestSide, GuestStatus } from '@/types/guest';
 import { GuestError } from '@/lib/appError';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
-import { resourceStyles } from '@/components/ui/resourceStyles';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Tabs } from '@/components/ui/Tabs';
+import { Modal } from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
 
 type SideFilter = 'all' | GuestSide.Bride | GuestSide.Groom;
+type StatusFilter = 'all' | GuestStatus;
 type FormMode = 'closed' | 'add' | Guest;
 
-const SIDE_FILTERS: { value: SideFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: GuestSide.Bride, label: 'Bride' },
-  { value: GuestSide.Groom, label: 'Groom' }
+const SIDE_TABS: { id: SideFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: GuestSide.Bride, label: 'Bride' },
+  { id: GuestSide.Groom, label: 'Groom' }
+];
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: GuestStatus.Pending, label: 'Pending' },
+  { value: GuestStatus.Invited, label: 'Invited' },
+  { value: GuestStatus.Confirmed, label: 'Confirmed' },
+  { value: GuestStatus.Declined, label: 'Declined' }
 ];
 
 function GuestsNotice({ title, body }: { title: string; body: string }): JSX.Element {
   return (
-    <div className="resource-notice">
-      <h2>{title}</h2>
-      <p>{body}</p>
-      <Link to="/dashboard" className="btn-secondary">
-        Back to dashboard
-      </Link>
-    </div>
+    <EmptyState
+      title={title}
+      description={body}
+      action={
+        <Link to="/dashboard">
+          <Button variant="secondary">Back to dashboard</Button>
+        </Link>
+      }
+    />
   );
 }
 
 function matchesSideFilter(guest: Guest, filter: SideFilter): boolean {
   return filter === 'all' || guest.side === filter || guest.side === GuestSide.Both;
+}
+
+function matchesStatusFilter(guest: Guest, filter: StatusFilter): boolean {
+  return filter === 'all' || guest.status === filter;
 }
 
 function matchesSearch(guest: Guest, search: string): boolean {
@@ -47,47 +68,58 @@ function matchesSearch(guest: Guest, search: string): boolean {
 /**
  * `/events/:eventId/guests` — the event's guest list. Same access check as
  * the workspace Overview; Add/Edit/Delete are additionally gated by
- * `canManage` (owner/planner), enforced for real by the
+ * `canManage` (owner/planner/couple), enforced for real by the
  * createGuest/updateGuest/deleteGuest Cloud Functions regardless of what
- * this page shows. Side filter and search both run client-side over the
- * already-loaded list — simple, and avoids double-counting "both" guests
- * across separate queries.
+ * this page shows. Side/status filters and search all run client-side
+ * over the already-loaded (already-scoped) list — no new queries.
  */
 export function GuestsPage(): JSX.Element {
   const { eventId } = useParams<{ eventId: string }>();
   const { user } = useAuth();
   const { state, reload } = useGuestList(user?.id ?? null, eventId);
+  const { show: showToast } = useToast();
+
   const [sideFilter, setSideFilter] = useState<SideFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
   const [formMode, setFormMode] = useState<FormMode>('closed');
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Guest | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const visibleGuests = useMemo(() => {
     if (state.status !== 'allowed') {
       return [];
     }
     return state.data.guests.filter(
-      (guest) => matchesSideFilter(guest, sideFilter) && matchesSearch(guest, search)
+      (guest) =>
+        matchesSideFilter(guest, sideFilter) && matchesStatusFilter(guest, statusFilter) && matchesSearch(guest, search)
     );
-  }, [state, sideFilter, search]);
+  }, [state, sideFilter, statusFilter, search]);
 
-  const handleDelete = async (guest: Guest): Promise<void> => {
-    if (!window.confirm(`Remove ${guest.name} from the guest list?`)) {
+  const handleDeleteConfirm = async (): Promise<void> => {
+    if (!deleteTarget) {
       return;
     }
 
-    setActionError(null);
+    setDeleting(true);
     try {
-      await guestService.deleteGuest(guest.id);
+      await guestService.deleteGuest(deleteTarget.id);
+      setDeleteTarget(null);
+      showToast('Guest removed.', 'success');
       reload();
     } catch (err) {
-      setActionError(err instanceof GuestError ? err.friendlyMessage : "We couldn't remove this guest right now.");
+      showToast(
+        err instanceof GuestError ? err.friendlyMessage : "We couldn't remove this guest right now.",
+        'danger'
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
-    <section className="resource-page">
-      {state.status === 'loading' && <LoadingSkeleton cards={2} />}
+    <section className="guests-page">
+      {state.status === 'loading' && <LoadingState label="Loading guests…" />}
 
       {state.status === 'error' && <ErrorState message={state.message} onRetry={reload} />}
 
@@ -107,68 +139,40 @@ export function GuestsPage(): JSX.Element {
 
       {state.status === 'allowed' && eventId && (
         <>
-          <div className="resource-section-header">
-            <h1>Guests</h1>
-            {state.data.canManage && formMode === 'closed' && (
-              <button type="button" className="btn-primary" onClick={() => setFormMode('add')}>
-                + Add Guest
-              </button>
-            )}
+          <div className="guests-header">
+            <div>
+              <h1>Guests</h1>
+              <p className="guests-subtitle">Keep track of everyone you&apos;re inviting.</p>
+            </div>
+            {state.data.canManage && <Button onClick={() => setFormMode('add')}>+ Add Guest</Button>}
           </div>
 
-          <div className="guest-counts">
-            <div className="guest-count">
-              <span className="guest-count-value">{state.data.counts.total}</span>
-              <span className="guest-count-label">Total</span>
-            </div>
-            <div className="guest-count">
-              <span className="guest-count-value">{state.data.counts.bride}</span>
-              <span className="guest-count-label">Bride</span>
-            </div>
-            <div className="guest-count">
-              <span className="guest-count-value">{state.data.counts.groom}</span>
-              <span className="guest-count-label">Groom</span>
-            </div>
-          </div>
-
-          {formMode !== 'closed' && (
-            <GuestForm
-              eventId={eventId}
-              guest={formMode === 'add' ? undefined : formMode}
-              allowedSides={state.data.manageableSides}
-              onSaved={() => {
-                setFormMode('closed');
-                reload();
-              }}
-              onCancel={() => setFormMode('closed')}
-            />
+          {state.data.guests.length > 0 && (
+            <p className="guests-count">
+              {state.data.counts.total} guest{state.data.counts.total === 1 ? '' : 's'} · {state.data.counts.bride}{' '}
+              bride side · {state.data.counts.groom} groom side
+            </p>
           )}
 
-          <div className="guest-toolbar">
-            <input
-              type="search"
-              className="guest-search-input"
-              placeholder="Search by name or phone"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <div className="guest-filter-tabs">
-              {SIDE_FILTERS.map((filter) => (
-                <button
-                  key={filter.value}
-                  type="button"
-                  className={`guest-filter-tab ${sideFilter === filter.value ? 'active' : ''}`}
-                  onClick={() => setSideFilter(filter.value)}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {actionError && (
-            <div className="form-error" style={{ marginBottom: '1rem' }}>
-              {actionError}
+          {state.data.guests.length > 0 && (
+            <div className="guests-toolbar">
+              <div className="guests-search">
+                <Input
+                  label="Search"
+                  placeholder="Search by name or phone"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+              <Tabs tabs={SIDE_TABS} activeId={sideFilter} onChange={(id) => setSideFilter(id as SideFilter)} />
+              <div className="guests-status-filter">
+                <Select
+                  label="Status"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                  options={STATUS_FILTER_OPTIONS}
+                />
+              </div>
             </div>
           )}
 
@@ -176,13 +180,48 @@ export function GuestsPage(): JSX.Element {
             guests={visibleGuests}
             hasAnyGuests={state.data.guests.length > 0}
             canManage={state.data.canManage}
+            onAdd={() => setFormMode('add')}
             onEdit={(guest) => setFormMode(guest)}
-            onDelete={handleDelete}
+            onDelete={(guest) => setDeleteTarget(guest)}
           />
+
+          {formMode !== 'closed' && (
+            <Modal
+              open
+              onClose={() => setFormMode('closed')}
+              title={formMode === 'add' ? 'Add Guest' : 'Edit Guest'}
+            >
+              <GuestForm
+                eventId={eventId}
+                guest={formMode === 'add' ? undefined : formMode}
+                allowedSides={state.data.manageableSides}
+                onSaved={(message) => {
+                  setFormMode('closed');
+                  showToast(message, 'success');
+                  reload();
+                }}
+                onCancel={() => setFormMode('closed')}
+              />
+            </Modal>
+          )}
+
+          {deleteTarget && (
+            <Modal open onClose={() => setDeleteTarget(null)} title="Remove guest?">
+              <p className="guest-confirm-body">
+                Remove {deleteTarget.name} from the guest list? This can&apos;t be undone.
+              </p>
+              <div className="auth-form-actions">
+                <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                  Cancel
+                </Button>
+                <Button variant="danger" onClick={() => void handleDeleteConfirm()} disabled={deleting}>
+                  {deleting ? 'Removing…' : 'Remove Guest'}
+                </Button>
+              </div>
+            </Modal>
+          )}
         </>
       )}
-
-      <style>{resourceStyles}</style>
     </section>
   );
 }

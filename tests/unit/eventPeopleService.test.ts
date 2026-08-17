@@ -105,6 +105,22 @@ describe('EventPeopleService.listPeople', () => {
     expect(other?.label).toBeNull();
   });
 
+  test('still includes a revoked (removed) member, so consumers like TaskService can resolve a historical assignee label', async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [
+        buildEventMember('event1', 'user1', { role: EventRole.Owner }),
+        buildEventMember('event1', 'user2', { status: MembershipStatus.Revoked })
+      ]
+    });
+
+    const result = await service.listPeople('user1', 'event1');
+
+    expect(result.status).toBe('allowed');
+    if (result.status !== 'allowed') return;
+    expect(result.data.members.map((m) => m.userId).sort()).toEqual(['user1', 'user2']);
+  });
+
   test('offers canInvite to an owner', async () => {
     const { service } = buildWorld({
       events: [buildEvent({ id: 'event1' })],

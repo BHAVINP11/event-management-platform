@@ -15,8 +15,13 @@ interface AuthContext {
   uid: string;
 }
 
-/** How long a new invitation remains acceptable. Not client-configurable. */
-const INVITATION_EXPIRY_DAYS = 14;
+/**
+ * How long a new invitation remains acceptable. Not client-configurable.
+ * Exported for reuse by `resendInvitation`, which extends an existing
+ * invitation's `expiresAt` by the same amount rather than duplicating
+ * this constant.
+ */
+export const INVITATION_EXPIRY_DAYS = 14;
 
 export function validateCreateInvitationInput(input: unknown): CreateInvitationInput {
   if (!input || typeof input !== 'object') {

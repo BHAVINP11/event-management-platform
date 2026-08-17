@@ -131,3 +131,56 @@ describe('InvitationService.getInvitationPreview', () => {
     });
   });
 });
+
+describe('InvitationService.cancelInvitation', () => {
+  beforeEach(() => mockCallable.mockReset());
+
+  test('calls the cancelInvitation callable', async () => {
+    mockCallable.mockResolvedValue({ data: { invitationId: 'inv1' } });
+    const service = new InvitationService();
+
+    await service.cancelInvitation('inv1');
+
+    expect(mockCallable).toHaveBeenCalledWith('onCancelInvitation', { invitationId: 'inv1' });
+  });
+
+  test('surfaces a not-pending invitation as a friendly error', async () => {
+    mockCallable.mockRejectedValue({
+      code: 'failed-precondition',
+      message: 'not pending',
+      details: { appCode: 'invitation_not_pending' }
+    });
+    const service = new InvitationService();
+
+    await expect(service.cancelInvitation('inv1')).rejects.toMatchObject({
+      friendlyMessage: 'This invitation is no longer available.'
+    });
+  });
+});
+
+describe('InvitationService.resendInvitation', () => {
+  beforeEach(() => mockCallable.mockReset());
+
+  test('calls the resendInvitation callable and returns the new expiry', async () => {
+    mockCallable.mockResolvedValue({ data: { invitationId: 'inv1', expiresAt: '2026-07-01T00:00:00.000Z' } });
+    const service = new InvitationService();
+
+    const expiresAt = await service.resendInvitation('inv1');
+
+    expect(expiresAt).toBe('2026-07-01T00:00:00.000Z');
+    expect(mockCallable).toHaveBeenCalledWith('onResendInvitation', { invitationId: 'inv1' });
+  });
+
+  test('surfaces a role-not-allowed failure as a friendly error', async () => {
+    mockCallable.mockRejectedValue({
+      code: 'permission-denied',
+      message: 'not allowed',
+      details: { appCode: 'event_role_not_allowed' }
+    });
+    const service = new InvitationService();
+
+    await expect(service.resendInvitation('inv1')).rejects.toMatchObject({
+      friendlyMessage: "Your role doesn't allow inviting people to this event."
+    });
+  });
+});

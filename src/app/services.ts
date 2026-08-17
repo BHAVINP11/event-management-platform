@@ -13,8 +13,10 @@ import { AuthorizationService } from '@/features/auth/services/authorizationServ
 import { DashboardService } from '@/features/dashboard/services/dashboardService';
 import { EventAccessService } from '@/features/events/services/eventAccessService';
 import { EventCreationService } from '@/features/events/services/eventCreationService';
+import { EventSettingsService } from '@/features/events/services/eventSettingsService';
 import { EventPeopleService } from '@/features/events/services/eventPeopleService';
 import { InvitationService } from '@/features/events/services/invitationService';
+import { MemberManagementService } from '@/features/events/services/memberManagementService';
 import { GuestService } from '@/features/events/services/guestService';
 import { FunctionService } from '@/features/events/services/functionService';
 import { ExpenseService } from '@/features/events/services/expenseService';
@@ -60,6 +62,8 @@ export const eventAccessService = new EventAccessService(
 
 export const eventCreationService = new EventCreationService(authorizationService, organizationRepository);
 
+export const eventSettingsService = new EventSettingsService();
+
 export const eventPeopleService = new EventPeopleService(
   authorizationService,
   eventRepository,
@@ -69,6 +73,8 @@ export const eventPeopleService = new EventPeopleService(
 );
 
 export const invitationService = new InvitationService();
+
+export const memberManagementService = new MemberManagementService();
 
 export const guestService = new GuestService(authorizationService, eventRepository, guestRepository);
 

@@ -1,101 +1,83 @@
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useEventAccess } from '@/features/events/hooks/useEventAccess';
-import { EventDetailView } from '@/features/events/types/eventAccess';
+import { EventCommandCenterData, useEventCommandCenter } from '@/features/events/hooks/useEventCommandCenter';
+import { NextUpCard, AttentionCard } from '@/features/events/components/CommandCenterCards';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
-import { resourceStyles } from '@/components/ui/resourceStyles';
-import { formatDateRange } from '@/lib/date';
-import { eventRoleLabel, eventStatusLabel, eventTypeLabel } from '@/lib/labels';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
 
-function EventOverview({ event }: { event: EventDetailView }): JSX.Element {
-  const dateRange = formatDateRange(event.startDate, event.endDate);
-  const venue = [event.venueName, event.venueAddress].filter(Boolean).join(' — ');
-
+function EventSnapshot({ data }: { data: EventCommandCenterData }): JSX.Element {
   return (
-    <dl className="event-overview-grid">
-      <div className="event-overview-field">
-        <dt>Event type</dt>
-        <dd>{eventTypeLabel(event.type)}</dd>
-      </div>
-
-      <div className="event-overview-field">
-        <dt>Date</dt>
-        <dd>{dateRange ?? 'Not scheduled yet'}</dd>
-      </div>
-
-      {venue && (
-        <div className="event-overview-field">
-          <dt>Venue</dt>
-          <dd>{venue}</dd>
+    <div className="event-snapshot">
+      {data.snapshotStats.map((stat) => (
+        <div className="event-snapshot-stat" key={stat.key}>
+          <span className="event-snapshot-value">{stat.value}</span>
+          <span className="event-snapshot-label">{stat.label}</span>
         </div>
-      )}
-
-      <div className="event-overview-field">
-        <dt>Status</dt>
-        <dd>{eventStatusLabel(event.status)}</dd>
-      </div>
-
-      <div className="event-overview-field">
-        <dt>Your role</dt>
-        <dd>{eventRoleLabel(event.role)}</dd>
-      </div>
-
-      <div className="event-overview-field">
-        <dt>Organization</dt>
-        <dd>{event.organizationName ?? 'Personal event'}</dd>
-      </div>
-
-      {event.description && (
-        <div className="event-overview-field" style={{ gridColumn: '1 / -1' }}>
-          <dt>Description</dt>
-          <dd>{event.description}</dd>
-        </div>
-      )}
-    </dl>
+      ))}
+    </div>
   );
 }
 
-/**
- * The event workspace header and the Overview page's own content.
- * Navigation between workspace sections is handled by the app shell's
- * sidebar, not by this page.
- */
-function EventWorkspace({ event }: { event: EventDetailView }): JSX.Element {
-  const dateRange = formatDateRange(event.startDate, event.endDate);
+function CommandCenter({ userId, eventId }: { userId: string | null; eventId: string }): JSX.Element {
+  const { state, reload } = useEventCommandCenter(userId, eventId, true);
+
+  if (state.status === 'loading') {
+    return <LoadingState label="Loading event activity…" />;
+  }
+
+  if (state.status === 'error') {
+    return <ErrorState message={state.message} onRetry={reload} />;
+  }
 
   return (
     <>
-      <div className="event-header">
-        <h1>{event.name}</h1>
-        <p className="page-subtitle">
-          {dateRange ?? 'Not scheduled yet'} · {eventStatusLabel(event.status)}
-        </p>
+      <div className="command-row">
+        <NextUpCard data={state.data} />
+        <AttentionCard data={state.data} />
       </div>
 
-      <EventOverview event={event} />
+      <div className="overview-section-header">
+        <h2>Event Snapshot</h2>
+      </div>
+      <EventSnapshot data={state.data} />
     </>
   );
 }
 
 function EventNotice({ title, body }: { title: string; body: string }): JSX.Element {
   return (
-    <div className="resource-notice">
-      <h2>{title}</h2>
-      <p>{body}</p>
-      <Link to="/dashboard" className="btn-secondary">
-        Back to dashboard
-      </Link>
-    </div>
+    <EmptyState
+      title={title}
+      description={body}
+      action={
+        <Link to="/dashboard">
+          <Button variant="secondary">Back to dashboard</Button>
+        </Link>
+      }
+    />
   );
 }
 
 /**
- * The `/events/:eventId` route.
+ * The `/events/:eventId` route — the event's command center. The hero
+ * (event identity: name, dates, venue, status, countdown) now renders
+ * one level up in `AppShell`, directly above `EventNav`, so it's the
+ * first thing inside the Event Workspace regardless of which event page
+ * happens to be active — see `AppShell`'s doc comment. This page renders
+ * only what's specific to Overview: "Next Up" (the soonest function),
+ * "Needs Attention" (tasks due soon / pending expenses / vendors
+ * awaiting confirmation), and a plain-count snapshot.
  *
- * Access is decided by AuthorizationService before the event is read, so the
- * URL cannot be used to reach an event the user is not an active member of.
- * Firestore Security Rules enforce the same boundary independently.
+ * Access is decided by `EventAccessService` before the event is read, so
+ * the URL cannot be used to reach an event the user is not an active
+ * member of. Firestore Security Rules enforce the same boundary
+ * independently. The command-center data reuses the same
+ * guest/function/expense/vendor/task list services their own pages already
+ * call (see `useEventCommandCenter`) — no new backend capability, just a
+ * second call site for existing reads.
  */
 export function EventWorkspacePage(): JSX.Element {
   const { eventId } = useParams<{ eventId: string }>();
@@ -103,8 +85,8 @@ export function EventWorkspacePage(): JSX.Element {
   const { state, reload } = useEventAccess(user?.id ?? null, eventId);
 
   return (
-    <section className="resource-page">
-      {state.status === 'loading' && <LoadingSkeleton cards={1} />}
+    <section className="overview-page">
+      {state.status === 'loading' && <LoadingState label="Loading event…" />}
 
       {state.status === 'error' && <ErrorState message={state.message} onRetry={reload} />}
 
@@ -122,9 +104,7 @@ export function EventWorkspacePage(): JSX.Element {
         />
       )}
 
-      {state.status === 'allowed' && <EventWorkspace event={state.event} />}
-
-      <style>{resourceStyles}</style>
+      {state.status === 'allowed' && eventId && <CommandCenter userId={user?.id ?? null} eventId={eventId} />}
     </section>
   );
 }

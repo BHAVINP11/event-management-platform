@@ -122,6 +122,58 @@ describe('EventAccessService', () => {
     });
   });
 
+  test('projects the budget amount already present on the loaded event, at no extra read cost', async () => {
+    const { service, eventRepository } = buildWorld({
+      events: [buildEvent({ id: 'event1', budgetAmount: 1000000 })],
+      eventMembers: [buildEventMember('event1', 'user1')]
+    });
+
+    const result = await service.loadEvent('user1', 'event1');
+
+    expect(result).toMatchObject({ status: 'allowed', event: { budgetAmount: 1000000 } });
+    expect(eventRepository.reads).toEqual(['event1']);
+  });
+
+  test('omits the budget amount when the event has none set', async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1')]
+    });
+
+    const result = await service.loadEvent('user1', 'event1');
+
+    expect(result.status).toBe('allowed');
+    if (result.status === 'allowed') {
+      expect(result.event.budgetAmount).toBeUndefined();
+    }
+  });
+
+  test('projects the cover image URL already present on the loaded event, at no extra read cost', async () => {
+    const { service, eventRepository } = buildWorld({
+      events: [buildEvent({ id: 'event1', coverImageUrl: 'https://example.com/cover.jpg' })],
+      eventMembers: [buildEventMember('event1', 'user1')]
+    });
+
+    const result = await service.loadEvent('user1', 'event1');
+
+    expect(result).toMatchObject({ status: 'allowed', event: { coverImageUrl: 'https://example.com/cover.jpg' } });
+    expect(eventRepository.reads).toEqual(['event1']);
+  });
+
+  test('omits the cover image URL when the event has none set', async () => {
+    const { service } = buildWorld({
+      events: [buildEvent({ id: 'event1' })],
+      eventMembers: [buildEventMember('event1', 'user1')]
+    });
+
+    const result = await service.loadEvent('user1', 'event1');
+
+    expect(result.status).toBe('allowed');
+    if (result.status === 'allowed') {
+      expect(result.event.coverImageUrl).toBeUndefined();
+    }
+  });
+
   test('a read failure surfaces an application error rather than an access denial', async () => {
     const world = buildWorld({
       events: [buildEvent({ id: 'event1' })],

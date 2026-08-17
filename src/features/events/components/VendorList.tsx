@@ -1,14 +1,12 @@
-import { Vendor, VendorStatus } from '@/types/vendor';
+import { Vendor } from '@/types/vendor';
 import { vendorCategoryLabel, vendorStatusLabel } from '@/lib/labels';
+import { vendorStatusBadgeVariant } from '@/lib/badgeVariants';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 
-const statusTagClass: Record<Vendor['status'], string> = {
-  [VendorStatus.Enquiry]: 'status-draft',
-  [VendorStatus.Shortlisted]: 'status-draft',
-  [VendorStatus.Confirmed]: 'status-active',
-  [VendorStatus.Cancelled]: 'status-archived'
-};
-
-function VendorRow({
+function VendorCard({
   vendor,
   canManage,
   onEdit,
@@ -20,63 +18,78 @@ function VendorRow({
   onDelete: () => void;
 }): JSX.Element {
   return (
-    <li className="resource-card">
-      <div className="resource-card-body">
+    <Card padded className="vendor-card">
+      <div className="vendor-card-header">
         <h3>{vendor.name}</h3>
-        {vendor.phone && <p>{vendor.phone}</p>}
-        {vendor.email && <p>{vendor.email}</p>}
-        <div className="resource-meta">
-          <span className="resource-tag">{vendorCategoryLabel(vendor.category)}</span>
-          <span className={`resource-tag ${statusTagClass[vendor.status]}`}>{vendorStatusLabel(vendor.status)}</span>
-        </div>
-        {vendor.notes && <p>{vendor.notes}</p>}
+        <Badge variant={vendorStatusBadgeVariant(vendor.status)}>{vendorStatusLabel(vendor.status)}</Badge>
       </div>
 
-      {canManage && (
-        <div className="resource-card-actions">
-          <button type="button" className="btn-secondary" onClick={onEdit}>
-            Edit
-          </button>
-          <button type="button" className="btn-secondary" onClick={onDelete}>
-            Delete
-          </button>
+      <Badge variant="neutral" className="vendor-category">
+        {vendorCategoryLabel(vendor.category)}
+      </Badge>
+
+      {(vendor.phone || vendor.email) && (
+        <div className="vendor-meta">
+          {vendor.phone && <span>{vendor.phone}</span>}
+          {vendor.email && <span>{vendor.email}</span>}
         </div>
       )}
-    </li>
+
+      {vendor.notes && <p className="vendor-notes">{vendor.notes}</p>}
+
+      {canManage && (
+        <div className="vendor-card-actions">
+          <Button variant="secondary" size="sm" onClick={onEdit}>
+            Edit
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onDelete}>
+            Delete
+          </Button>
+        </div>
+      )}
+    </Card>
   );
 }
 
 /**
- * The vendor rows for `/events/:eventId/vendors`. `vendors` is the already
- * filtered (by status tab) list; `hasAnyVendors` distinguishes "no vendors
- * on this event yet" from "no vendors match the current filter," which
- * need different empty-state copy.
+ * The vendor cards for `/events/:eventId/vendors`. `vendors` is the
+ * already filtered/searched/sorted list; `hasAnyVendors` distinguishes
+ * "no vendors on this event yet" from "no vendors match the current
+ * filter/search," which need different empty-state copy.
  */
 export function VendorList({
   vendors,
   hasAnyVendors,
   canManage,
+  onAdd,
   onEdit,
   onDelete
 }: {
   vendors: readonly Vendor[];
   hasAnyVendors: boolean;
   canManage: boolean;
+  onAdd: () => void;
   onEdit: (vendor: Vendor) => void;
   onDelete: (vendor: Vendor) => void;
 }): JSX.Element {
   if (vendors.length === 0) {
     return (
-      <div className="resource-empty">
-        <p>{hasAnyVendors ? 'No vendors match this filter.' : 'No vendors added yet.'}</p>
-      </div>
+      <EmptyState
+        title={hasAnyVendors ? 'No vendors match your search' : 'No vendors added yet'}
+        description={
+          hasAnyVendors
+            ? 'Try a different name, category, or filter.'
+            : 'Keep your event vendors organized in one place.'
+        }
+        action={canManage && !hasAnyVendors ? <Button onClick={onAdd}>+ Add Vendor</Button> : undefined}
+      />
     );
   }
 
   return (
-    <ul className="resource-list">
+    <div className="vendors-grid">
       {vendors.map((vendor) => (
-        <VendorRow
+        <VendorCard
           key={vendor.id}
           vendor={vendor}
           canManage={canManage}
@@ -84,6 +97,6 @@ export function VendorList({
           onDelete={() => onDelete(vendor)}
         />
       ))}
-    </ul>
+    </div>
   );
 }

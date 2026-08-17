@@ -1,0 +1,200 @@
+/**
+ * Planner Home + Couple Home — the two post-onboarding "home" experiences
+ * rendered by DashboardPage. CoupleHome leads with an event hero (the
+ * event IS the point of the app); PlannerHome leads with a calm greeting
+ * and a grid of the planner's events.
+ */
+
+.home-page {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.home-greeting {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.home-subtitle {
+  margin: 0 0 var(--space-8);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.home-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.home-section-header h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.home-event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+.home-event-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.home-event-card h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.home-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.home-event-detail {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.home-event-countdown {
+  margin: 0;
+  color: var(--color-accent-active);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Couple hero */
+
+.home-hero {
+  position: relative;
+  border-radius: var(--radius-xl);
+  background: var(--color-plum);
+  box-shadow: var(--shadow-plum);
+  padding: var(--space-10) var(--space-8);
+  margin-bottom: var(--space-8);
+  --hero-glow-a: var(--color-accent);
+  --hero-glow-b: var(--color-lavender);
+}
+
+.home-hero-glow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(480px circle at 88% -10%, color-mix(in srgb, var(--hero-glow-a) 55%, transparent), transparent 60%),
+    radial-gradient(420px circle at -5% 115%, color-mix(in srgb, var(--hero-glow-b) 40%, transparent), transparent 60%);
+}
+
+.home-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.home-hero-eyebrow {
+  color: var(--color-text-on-plum-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.home-hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.15;
+  color: var(--color-text-on-plum);
+}
+
+.home-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  align-items: center;
+  color: var(--color-text-on-plum-muted);
+  font-size: var(--font-size-sm);
+}
+
+.home-hero-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.home-quick-action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.home-quick-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-tint);
+  color: var(--color-accent-active);
+}
+
+.home-quick-action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.home-quick-action span:last-child {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.home-secondary-events {
+  margin-top: var(--space-8);
+}
+
+@media (max-width: 639px) {
+  .home-event-grid,
+  .home-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .home-greeting {
+    font-size: var(--font-size-xl);
+  }
+
+  .home-hero {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .home-hero-title {
+    font-size: var(--font-size-2xl);
+  }
+}

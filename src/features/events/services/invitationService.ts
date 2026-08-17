@@ -25,6 +25,23 @@ interface GetInvitationPreviewFunctionInput {
   invitationId: string;
 }
 
+interface CancelInvitationFunctionInput {
+  invitationId: string;
+}
+
+interface CancelInvitationFunctionOutput {
+  invitationId: string;
+}
+
+interface ResendInvitationFunctionInput {
+  invitationId: string;
+}
+
+interface ResendInvitationFunctionOutput {
+  invitationId: string;
+  expiresAt: string;
+}
+
 export interface InvitationPreview {
   eventName: string;
   invitedEmail: string;
@@ -108,6 +125,32 @@ export class InvitationService {
       );
       const result: HttpsCallableResult<InvitationPreview> = await callable({ invitationId });
       return result.data;
+    } catch (error) {
+      throw toInvitationError(error);
+    }
+  }
+
+  async cancelInvitation(invitationId: string): Promise<void> {
+    try {
+      const callable = httpsCallable<CancelInvitationFunctionInput, CancelInvitationFunctionOutput>(
+        functions,
+        'onCancelInvitation'
+      );
+      await callable({ invitationId });
+    } catch (error) {
+      throw toInvitationError(error);
+    }
+  }
+
+  /** Extends the invitation's expiry rather than sending a new email — see `functions/src/invitations/resendInvitation.ts`. */
+  async resendInvitation(invitationId: string): Promise<string> {
+    try {
+      const callable = httpsCallable<ResendInvitationFunctionInput, ResendInvitationFunctionOutput>(
+        functions,
+        'onResendInvitation'
+      );
+      const result: HttpsCallableResult<ResendInvitationFunctionOutput> = await callable({ invitationId });
+      return result.data.expiresAt;
     } catch (error) {
       throw toInvitationError(error);
     }

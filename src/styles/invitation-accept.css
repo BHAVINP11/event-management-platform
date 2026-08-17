@@ -1,0 +1,33 @@
+/** Invitation acceptance — `/invitations/:invitationId`. A short, single-purpose page. */
+
+.invitation-accept-page {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.invitation-accept-page h1 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.invitation-accept-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.invitation-accept-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.invitation-accept-notice p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}

@@ -1,13 +1,12 @@
 import { Expense, PaymentStatus } from '@/types/expense';
 import { expenseCategoryLabel, paymentStatusLabel } from '@/lib/labels';
+import { paymentStatusBadgeVariant } from '@/lib/badgeVariants';
 import { formatCurrency } from '@/lib/currency';
 import { formatEventDate } from '@/lib/date';
-
-const statusTagClass: Record<Expense['paymentStatus'], string> = {
-  [PaymentStatus.Unpaid]: 'status-draft',
-  [PaymentStatus.PartiallyPaid]: 'status-draft',
-  [PaymentStatus.Paid]: 'status-active'
-};
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 function ExpenseRow({
   expense,
@@ -23,70 +22,93 @@ function ExpenseRow({
   const paymentDate = formatEventDate(expense.paymentDate);
 
   return (
-    <li className="resource-card">
-      <div className="resource-card-body">
-        <h3>{expense.title}</h3>
-        <p>{formatCurrency(expense.amount)}</p>
-        <div className="resource-meta">
-          <span className="resource-tag">{expenseCategoryLabel(expense.category)}</span>
-          <span className={`resource-tag ${statusTagClass[expense.paymentStatus]}`}>
-            {paymentStatusLabel(expense.paymentStatus)}
-          </span>
-          {expense.paymentStatus === PaymentStatus.PartiallyPaid && (
-            <span className="resource-tag">Paid {formatCurrency(expense.paidAmount)}</span>
-          )}
-          {paymentDate && <span className="resource-tag">{paymentDate}</span>}
+    <Card padded>
+      <div className="expense-row">
+        <div className="expense-row-primary">
+          <h3>{expense.title}</h3>
+          {expense.notes && <p>{expense.notes}</p>}
         </div>
-        {expense.notes && <p>{expense.notes}</p>}
-      </div>
 
-      {canManage && (
-        <div className="resource-card-actions">
-          <button type="button" className="btn-secondary" onClick={onEdit}>
-            Edit
-          </button>
-          <button type="button" className="btn-secondary" onClick={onDelete}>
-            Delete
-          </button>
+        <div className="expense-row-field">
+          <span className="expense-row-field-label">Category</span>
+          <Badge variant="neutral">{expenseCategoryLabel(expense.category)}</Badge>
         </div>
-      )}
-    </li>
+
+        <div className="expense-row-field">
+          <span className="expense-row-field-label">Status</span>
+          <Badge variant={paymentStatusBadgeVariant(expense.paymentStatus)}>
+            {paymentStatusLabel(expense.paymentStatus)}
+          </Badge>
+          {expense.paymentStatus === PaymentStatus.PartiallyPaid && (
+            <span className="expense-row-field-note">Paid {formatCurrency(expense.paidAmount)}</span>
+          )}
+        </div>
+
+        <div className="expense-row-field expense-row-field--date">
+          <span className="expense-row-field-label">Amount</span>
+          <span>{formatCurrency(expense.amount)}</span>
+          {paymentDate && <span className="expense-row-field-note">{paymentDate}</span>}
+        </div>
+
+        {canManage && (
+          <div className="expense-row-actions">
+            <Button variant="secondary" size="sm" onClick={onEdit}>
+              Edit
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onDelete}>
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
 /**
- * The expense rows for `/events/:eventId/expenses`. `expenses` is the full
- * list for the event — no client-side filtering, unlike Guests.
+ * The expense rows for `/events/:eventId/expenses`. `expenses` is the
+ * already filtered/searched/sorted list; `hasAnyExpenses` distinguishes
+ * "no expenses on this event yet" from "no expenses match the current
+ * filter/search," which need different empty-state copy.
  */
 export function ExpenseList({
   expenses,
+  hasAnyExpenses,
   canManage,
+  onAdd,
   onEdit,
   onDelete
 }: {
   expenses: readonly Expense[];
+  hasAnyExpenses: boolean;
   canManage: boolean;
+  onAdd: () => void;
   onEdit: (expense: Expense) => void;
   onDelete: (expense: Expense) => void;
 }): JSX.Element {
   if (expenses.length === 0) {
     return (
-      <div className="resource-empty">
-        <p>No expenses added yet.</p>
-      </div>
+      <EmptyState
+        title={hasAnyExpenses ? 'No expenses match your search' : 'No expenses added yet'}
+        description={
+          hasAnyExpenses ? 'Try a different title, category, or filter.' : 'Start tracking your event spending.'
+        }
+        action={canManage && !hasAnyExpenses ? <Button onClick={onAdd}>+ Add Expense</Button> : undefined}
+      />
     );
   }
 
   return (
-    <ul className="resource-list">
+    <ul className="expenses-list">
       {expenses.map((expense) => (
-        <ExpenseRow
-          key={expense.id}
-          expense={expense}
-          canManage={canManage}
-          onEdit={() => onEdit(expense)}
-          onDelete={() => onDelete(expense)}
-        />
+        <li key={expense.id}>
+          <ExpenseRow
+            expense={expense}
+            canManage={canManage}
+            onEdit={() => onEdit(expense)}
+            onDelete={() => onDelete(expense)}
+          />
+        </li>
       ))}
     </ul>
   );

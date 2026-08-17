@@ -59,6 +59,12 @@ export class EventPeopleService {
         this.authorizationService.getEventMembership(userId, eventId)
       ]);
 
+      // Removed members are marked `revoked` (see `removeMember`), not
+      // deleted, so they are still returned here — `TaskService` (and any
+      // other consumer) relies on every member being present to resolve a
+      // historical assignee's label even after they've lost access. The
+      // People page itself filters this list down to active members for
+      // display; that's a UI concern, not a data-loading one.
       const memberSummaries = await Promise.all(members.map((member) => this.toPersonSummary(member, userId)));
 
       const pendingInvitations = invitations
@@ -96,7 +102,8 @@ export class EventPeopleService {
       label,
       role: member.role,
       side: member.side ?? null,
-      status: member.status
+      status: member.status,
+      joinedAt: member.createdAt
     };
   }
 }
@@ -106,5 +113,7 @@ const toInvitationSummary = (invitation: Invitation): EventInvitationSummary => 
   invitedEmail: invitation.invitedEmail,
   role: invitation.role,
   side: invitation.side ?? null,
-  status: invitation.status
+  status: invitation.status,
+  createdAt: invitation.createdAt,
+  expiresAt: invitation.expiresAt
 });

@@ -19,6 +19,10 @@ body,
 
 body {
   line-height: 1.5;
+  /* Inherited by every element: long unbroken strings (names, emails,
+     descriptions) break instead of forcing horizontal overflow inside
+     cards/rows. */
+  overflow-wrap: break-word;
 }
 
 a {
@@ -28,4 +32,17 @@ a {
 
 button {
   font: inherit;
+}
+
+/**
+ * The one place the "editorial" half of the visual language lives: event
+ * names, hero headings, and other emotional/celebratory content. Never
+ * applied to operational UI (module headers, forms, tables), which stays
+ * in --font-sans for readability and density.
+ */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-semibold);
+  font-style: normal;
+  letter-spacing: -0.01em;
 }

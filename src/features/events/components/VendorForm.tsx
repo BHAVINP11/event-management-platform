@@ -4,6 +4,9 @@ import { VendorFormInput } from '@/features/events/types/vendors';
 import { Vendor, VendorCategory, VendorStatus } from '@/types/vendor';
 import { vendorCategoryLabel, vendorStatusLabel } from '@/lib/labels';
 import { VendorError } from '@/lib/appError';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const CATEGORY_OPTIONS = Object.values(VendorCategory).map((category) => ({
   value: category,
@@ -43,11 +46,11 @@ const toInput = (fields: VendorFormFields): VendorFormInput => ({
 });
 
 /**
- * Add/edit vendor form. Only mounted for users with `canManage`
- * (owner/planner) — createVendor/updateVendor independently re-verify the
- * role server-side regardless. `eventId`/`createdBy`/`id`/`createdAt` are
- * never part of this form; the Cloud Function derives or preserves them
- * itself.
+ * Add/edit vendor form — the content of the Modal that hosts it. Only
+ * mounted for users with `canManage` (owner/planner) — createVendor/
+ * updateVendor independently re-verify the role server-side regardless.
+ * `eventId`/`createdBy`/`id`/`createdAt` are never part of this form; the
+ * Cloud Function derives or preserves them itself.
  */
 export function VendorForm({
   eventId,
@@ -57,7 +60,7 @@ export function VendorForm({
 }: {
   eventId: string;
   vendor?: Vendor;
-  onSaved: () => void;
+  onSaved: (message: string) => void;
   onCancel: () => void;
 }): JSX.Element {
   const [fields, setFields] = useState<VendorFormFields>(toFields(vendor));
@@ -80,10 +83,11 @@ export function VendorForm({
       const input = toInput(fields);
       if (vendor) {
         await vendorService.updateVendor(vendor.id, input);
+        onSaved('Vendor updated.');
       } else {
         await vendorService.createVendor(eventId, input);
+        onSaved('Vendor added.');
       }
-      onSaved();
     } catch (err) {
       setError(err instanceof VendorError ? err.friendlyMessage : "We couldn't save this vendor right now.");
       setSubmitting(false);
@@ -91,83 +95,61 @@ export function VendorForm({
   };
 
   return (
-    <form className="event-form" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
-      {error && <div className="form-error">{error}</div>}
+    <form onSubmit={handleSubmit}>
+      {error && (
+        <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {error}
+        </div>
+      )}
 
-      <div className="form-group">
-        <label htmlFor="vendor-name">Name *</label>
-        <input
-          id="vendor-name"
-          name="name"
-          type="text"
-          value={fields.name}
+      <Input label="Name *" name="name" value={fields.name} onChange={handleChange} required disabled={submitting} />
+
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Select
+          label="Category *"
+          name="category"
+          value={fields.category}
           onChange={handleChange}
-          required
+          disabled={submitting}
+          options={CATEGORY_OPTIONS}
+        />
+        <Select
+          label="Status"
+          name="status"
+          value={fields.status}
+          onChange={handleChange}
+          disabled={submitting}
+          options={STATUS_OPTIONS}
+        />
+      </div>
+
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Phone"
+          name="phone"
+          type="tel"
+          value={fields.phone}
+          onChange={handleChange}
+          disabled={submitting}
+        />
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          value={fields.email}
+          onChange={handleChange}
           disabled={submitting}
         />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="vendor-category">Category *</label>
-          <select
-            id="vendor-category"
-            name="category"
-            value={fields.category}
-            onChange={handleChange}
-            disabled={submitting}
-          >
-            {CATEGORY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="vendor-status">Status</label>
-          <select id="vendor-status" name="status" value={fields.status} onChange={handleChange} disabled={submitting}>
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="vendor-phone">Phone</label>
-          <input
-            id="vendor-phone"
-            name="phone"
-            type="tel"
-            value={fields.phone}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="vendor-email">Email</label>
-          <input
-            id="vendor-email"
-            name="email"
-            type="email"
-            value={fields.email}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="vendor-notes">Notes</label>
+      <div className="field" style={{ marginTop: 'var(--space-4)' }}>
+        <label className="field-label" htmlFor="vendor-notes">
+          Notes
+        </label>
         <textarea
           id="vendor-notes"
           name="notes"
+          className="field-control"
           rows={3}
           value={fields.notes}
           onChange={handleChange}
@@ -175,13 +157,13 @@ export function VendorForm({
         />
       </div>
 
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
+      <div className="auth-form-actions">
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>
           Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
+        </Button>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : vendor ? 'Save Changes' : 'Add Vendor'}
-        </button>
+        </Button>
       </div>
     </form>
   );

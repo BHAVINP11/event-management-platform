@@ -3,6 +3,9 @@ import { functionService } from '@/app/services';
 import { FunctionFormInput } from '@/features/events/types/functions';
 import { EventFunction, EventFunctionStatus } from '@/types/eventFunction';
 import { FunctionError } from '@/lib/appError';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
 
 const STATUS_OPTIONS: { value: EventFunctionStatus; label: string }[] = [
   { value: EventFunctionStatus.Planned, label: 'Planned' },
@@ -45,11 +48,12 @@ const toInput = (fields: FunctionFormFields): FunctionFormInput => ({
 });
 
 /**
- * Add/edit function/ceremony form. Only mounted for users with
- * `canManage` (owner/planner) — createFunction/updateFunction
- * independently re-verify the role server-side regardless. `eventId`/
- * `createdBy`/`id`/`createdAt` are never part of this form; the Cloud
- * Function derives or preserves them itself.
+ * Add/edit function/ceremony form — the content of the Modal that hosts
+ * it. Only mounted for users with `canManage` (owner/planner) —
+ * createFunction/updateFunction independently re-verify the role
+ * server-side regardless. `eventId`/`createdBy`/`id`/`createdAt` are
+ * never part of this form; the Cloud Function derives or preserves them
+ * itself.
  */
 export function FunctionForm({
   eventId,
@@ -59,7 +63,7 @@ export function FunctionForm({
 }: {
   eventId: string;
   fn?: EventFunction;
-  onSaved: () => void;
+  onSaved: (message: string) => void;
   onCancel: () => void;
 }): JSX.Element {
   const [fields, setFields] = useState<FunctionFormFields>(toFields(fn));
@@ -82,10 +86,11 @@ export function FunctionForm({
       const input = toInput(fields);
       if (fn) {
         await functionService.updateFunction(fn.id, input);
+        onSaved('Function updated.');
       } else {
         await functionService.createFunction(eventId, input);
+        onSaved('Function added.');
       }
-      onSaved();
     } catch (err) {
       setError(err instanceof FunctionError ? err.friendlyMessage : "We couldn't save this function right now.");
       setSubmitting(false);
@@ -93,27 +98,23 @@ export function FunctionForm({
   };
 
   return (
-    <form className="event-form" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
-      {error && <div className="form-error">{error}</div>}
+    <form onSubmit={handleSubmit}>
+      {error && (
+        <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          {error}
+        </div>
+      )}
 
-      <div className="form-group">
-        <label htmlFor="function-name">Name *</label>
-        <input
-          id="function-name"
-          name="name"
-          type="text"
-          value={fields.name}
-          onChange={handleChange}
-          required
-          disabled={submitting}
-        />
-      </div>
+      <Input label="Name *" name="name" value={fields.name} onChange={handleChange} required disabled={submitting} />
 
-      <div className="form-group">
-        <label htmlFor="function-description">Description</label>
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <label className="field-label" htmlFor="function-description">
+          Description
+        </label>
         <textarea
           id="function-description"
           name="description"
+          className="field-control"
           rows={2}
           value={fields.description}
           onChange={handleChange}
@@ -121,63 +122,48 @@ export function FunctionForm({
         />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="function-date">Date</label>
-          <input
-            id="function-date"
-            name="date"
-            type="date"
-            value={fields.date}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="function-status">Status</label>
-          <select id="function-status" name="status" value={fields.status} onChange={handleChange} disabled={submitting}>
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Date"
+          name="date"
+          type="date"
+          value={fields.date}
+          onChange={handleChange}
+          disabled={submitting}
+        />
+        <Select
+          label="Status"
+          name="status"
+          value={fields.status}
+          onChange={handleChange}
+          disabled={submitting}
+          options={STATUS_OPTIONS}
+        />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="function-start-time">Start Time</label>
-          <input
-            id="function-start-time"
-            name="startTime"
-            type="time"
-            value={fields.startTime}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="function-end-time">End Time</label>
-          <input
-            id="function-end-time"
-            name="endTime"
-            type="time"
-            value={fields.endTime}
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
+      <div className="auth-form-row" style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Start Time"
+          name="startTime"
+          type="time"
+          value={fields.startTime}
+          onChange={handleChange}
+          disabled={submitting}
+        />
+        <Input
+          label="End Time"
+          name="endTime"
+          type="time"
+          value={fields.endTime}
+          onChange={handleChange}
+          disabled={submitting}
+        />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="function-venue">Venue</label>
-        <input
-          id="function-venue"
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <Input
+          label="Venue"
           name="venue"
-          type="text"
           placeholder="e.g., Royal Palace"
           value={fields.venue}
           onChange={handleChange}
@@ -185,11 +171,14 @@ export function FunctionForm({
         />
       </div>
 
-      <div className="form-group">
-        <label htmlFor="function-notes">Notes</label>
+      <div className="field" style={{ marginTop: 'var(--space-4)' }}>
+        <label className="field-label" htmlFor="function-notes">
+          Notes
+        </label>
         <textarea
           id="function-notes"
           name="notes"
+          className="field-control"
           rows={3}
           value={fields.notes}
           onChange={handleChange}
@@ -197,13 +186,13 @@ export function FunctionForm({
         />
       </div>
 
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={submitting}>
+      <div className="auth-form-actions">
+        <Button type="button" variant="secondary" onClick={onCancel} disabled={submitting}>
           Cancel
-        </button>
-        <button type="submit" className="btn-primary" disabled={submitting}>
+        </Button>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : fn ? 'Save Changes' : 'Add Function'}
-        </button>
+        </Button>
       </div>
     </form>
   );

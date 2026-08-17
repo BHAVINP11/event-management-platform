@@ -1,15 +1,13 @@
 import { Task, TaskStatus } from '@/types/task';
 import { taskPriorityLabel, taskStatusLabel } from '@/lib/labels';
-import { formatEventDate } from '@/lib/date';
+import { taskPriorityBadgeVariant, taskStatusBadgeVariant } from '@/lib/badgeVariants';
+import { formatEventDate, isBeforeToday } from '@/lib/date';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 
-const statusTagClass: Record<Task['status'], string> = {
-  [TaskStatus.Todo]: 'status-draft',
-  [TaskStatus.InProgress]: 'status-draft',
-  [TaskStatus.Completed]: 'status-active',
-  [TaskStatus.Cancelled]: 'status-archived'
-};
-
-function TaskRow({
+function TaskCard({
   task,
   assignedLabel,
   canEdit,
@@ -27,58 +25,67 @@ function TaskRow({
   onMarkComplete: () => void;
 }): JSX.Element {
   const dueDate = formatEventDate(task.dueDate);
+  const overdue =
+    isBeforeToday(task.dueDate) && task.status !== TaskStatus.Completed && task.status !== TaskStatus.Cancelled;
   const canComplete = canEdit && task.status !== TaskStatus.Completed && task.status !== TaskStatus.Cancelled;
 
   return (
-    <li className="resource-card">
-      <div className="resource-card-body">
+    <Card padded className="task-card">
+      <div className="task-card-header">
         <h3>{task.title}</h3>
-        {task.description && <p>{task.description}</p>}
-        <div className="resource-meta">
-          {dueDate && <span className="resource-tag">Due {dueDate}</span>}
-          <span className="resource-tag">{taskPriorityLabel(task.priority)}</span>
-          {assignedLabel && <span className="resource-tag">{assignedLabel}</span>}
-          <span className={`resource-tag ${statusTagClass[task.status]}`}>{taskStatusLabel(task.status)}</span>
-        </div>
+        <Badge variant={taskStatusBadgeVariant(task.status)}>{taskStatusLabel(task.status)}</Badge>
       </div>
 
+      <div className="task-card-badges">
+        <Badge variant={taskPriorityBadgeVariant(task.priority)}>{taskPriorityLabel(task.priority)}</Badge>
+      </div>
+
+      <div className="task-meta">
+        {dueDate && <span className={overdue ? 'task-due-date--overdue' : undefined}>{overdue ? 'Overdue: ' : 'Due '}{dueDate}</span>}
+        {assignedLabel && <span>Assigned to {assignedLabel}</span>}
+      </div>
+
+      {task.description && <p className="task-description">{task.description}</p>}
+
       {(canEdit || canDelete) && (
-        <div className="resource-card-actions">
+        <div className="task-card-actions">
           {canComplete && (
-            <button type="button" className="btn-secondary" onClick={onMarkComplete}>
+            <Button variant="secondary" size="sm" onClick={onMarkComplete}>
               Mark Complete
-            </button>
+            </Button>
           )}
           {canEdit && (
-            <button type="button" className="btn-secondary" onClick={onEdit}>
+            <Button variant="secondary" size="sm" onClick={onEdit}>
               Edit
-            </button>
+            </Button>
           )}
           {canDelete && (
-            <button type="button" className="btn-secondary" onClick={onDelete}>
+            <Button variant="secondary" size="sm" onClick={onDelete}>
               Delete
-            </button>
+            </Button>
           )}
         </div>
       )}
-    </li>
+    </Card>
   );
 }
 
 /**
- * The task rows for `/events/:eventId/tasks`. `tasks` is the already
- * filtered (by status tab) list; `hasAnyTasks` distinguishes "no tasks on
- * this event yet" from "no tasks match the current filter," which need
- * different empty-state copy. `canEdit`/`canDelete` are supplied per row
- * by the page (owner/planner may edit/delete any task; staff may only
- * edit — never delete — a task assigned to themselves).
+ * The task cards for `/events/:eventId/tasks`. `tasks` is the already
+ * filtered/searched/sorted list; `hasAnyTasks` distinguishes "no tasks on
+ * this event yet" from "no tasks match the current filter/search," which
+ * need different empty-state copy. `canEditTask`/`canDeleteTask` are
+ * supplied per row by the page — owner/planner may edit/delete any task;
+ * staff may only edit (never delete) a task assigned to themselves.
  */
 export function TaskList({
   tasks,
   hasAnyTasks,
   memberLabelByUserId,
+  canManageAll,
   canEditTask,
   canDeleteTask,
+  onAdd,
   onEdit,
   onDelete,
   onMarkComplete
@@ -86,24 +93,32 @@ export function TaskList({
   tasks: readonly Task[];
   hasAnyTasks: boolean;
   memberLabelByUserId: Record<string, string>;
+  canManageAll: boolean;
   canEditTask: (task: Task) => boolean;
   canDeleteTask: (task: Task) => boolean;
+  onAdd: () => void;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onMarkComplete: (task: Task) => void;
 }): JSX.Element {
   if (tasks.length === 0) {
     return (
-      <div className="resource-empty">
-        <p>{hasAnyTasks ? 'No tasks match this filter.' : 'No tasks added yet.'}</p>
-      </div>
+      <EmptyState
+        title={hasAnyTasks ? 'No tasks match your search' : 'No tasks yet'}
+        description={
+          hasAnyTasks
+            ? 'Try a different title, description, or filter.'
+            : 'Add tasks to keep your event planning on track.'
+        }
+        action={canManageAll && !hasAnyTasks ? <Button onClick={onAdd}>+ Add Task</Button> : undefined}
+      />
     );
   }
 
   return (
-    <ul className="resource-list">
+    <div className="tasks-grid">
       {tasks.map((task) => (
-        <TaskRow
+        <TaskCard
           key={task.id}
           task={task}
           assignedLabel={task.assignedTo ? memberLabelByUserId[task.assignedTo] ?? 'Member' : null}
@@ -114,6 +129,6 @@ export function TaskList({
           onMarkComplete={() => onMarkComplete(task)}
         />
       ))}
-    </ul>
+    </div>
   );
 }

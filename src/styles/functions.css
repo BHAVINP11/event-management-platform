@@ -1,0 +1,98 @@
+/**
+ * Functions/Ceremonies — `/events/:eventId/functions`. Fewer items than a
+ * guest list, each one meaningful, so this gets a card grid with real
+ * visual hierarchy rather than a dense row list.
+ */
+
+.functions-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.functions-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.functions-header h1 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.functions-subtitle {
+  margin: var(--space-1) 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-base);
+}
+
+.functions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.function-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.function-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.function-card-header h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.function-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.function-description {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  flex: 1;
+}
+
+.function-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.function-confirm-body {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 639px) {
+  .functions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .functions-header .btn {
+    width: 100%;
+  }
+}
